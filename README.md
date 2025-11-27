@@ -39,8 +39,7 @@ In a typical setup:
 2. Configure this repository with CMake, pointing `CMAKE_PREFIX_PATH` to the AdePT installation:
 
    ```bash
-   cmake -S . -B build \
-  -DCMAKE_PREFIX_PATH="<path_to_adept_installation>;<other_prefixes>"
+   cmake -S . -B build -DCMAKE_PREFIX_PATH="<path_to_adept_installation>;<other_prefixes>"
 
    cmake --build build -- -j
    ```
