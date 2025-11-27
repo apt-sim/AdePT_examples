@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025 CERN for the benefit of the AdePT project
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # AdePT Examples
 
 This directory contains all standalone examples for the AdePT project.
