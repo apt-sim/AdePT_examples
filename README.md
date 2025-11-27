@@ -40,11 +40,12 @@ In a typical setup:
 
    ```bash
    cmake -S . -B build \
-     -DCMAKE_PREFIX_PATH="<path_to_adept_installation>;<other_paths_to dependencies>"
+  -DCMAKE_PREFIX_PATH="<path_to_adept_installation>;<other_prefixes>"
+
    cmake --build build -- -j
    ```
 
-Individual example targets will appear under build/examples/<name>/.
+Individual example targets will appear under `build/examples/<name>/`.
 
 For details, follow the documentation of each example.
 
@@ -70,9 +71,9 @@ For details, follow the documentation of each example.
 Contributions of new examples are welcome!
 Please follow the steps and documentation guidelines described in:
 
-👉 docs/example_template.md
+👉 [`docs/example_template.md`](docs/example_template.md)
 
-Also see the project’s CONTRIBUTING.md for coding style and workflow.
+Also see the project’s [`CONTRIBUTING.md`](CONTRIBUTING.md) for coding style and workflow.
 
 ---
 
@@ -81,4 +82,4 @@ Also see the project’s CONTRIBUTING.md for coding style and workflow.
 - Code in this repository is licensed under Apache-2.0
 - Documentation is licensed under CC-BY-4.0
 
-See LICENSE and LICENSES/ for details.
+See [`LICENSE`](LICENSE) and [`LICENSES/`](LICENSES/) for details.
