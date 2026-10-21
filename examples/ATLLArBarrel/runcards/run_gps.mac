@@ -1,0 +1,29 @@
+#USE GPS instead of default gun
+/run/initialize
+/run/printProgress 10
+/run/setCut 0.1 mm
+/gps/particle gamma
+/gps/energy 20 GeV
+/gps/position 0. 0. 0. m
+/gps/ang/type iso #isotropic angular distribution
+/gps/ang/minphi 3.14 rad
+/gps/ang/maxphi 3.19 rad
+/gps/ang/mintheta 104.177 deg #0.2 eta
+/gps/ang/maxtheta 105.415 deg #0.25 eta
+/run/beamOn 10000
+
+/gps/particle pi-
+/gps/energy 20 GeV
+/run/beamOn 10000
+
+/gps/energy 50 GeV
+/run/beamOn 10000
+
+/gps/energy 100 GeV
+/run/beamOn 10000
+
+/gps/energy 150 GeV
+/run/beamOn 10000
+
+/gps/energy 200 GeV
+/run/beamOn 10000

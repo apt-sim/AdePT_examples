@@ -1,0 +1,9 @@
+#inactivate GammaGeneralProcess, must be done at preinit stage
+/process/em/UseGeneralProcess false
+/run/initialize
+/run/printProgress 1
+/gun/particle gamma
+/gun/energy 5 GeV
+/gun/direction 1 0 0
+/gun/position 0 0 3.5 m
+/run/beamOn 1000

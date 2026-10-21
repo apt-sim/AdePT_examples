@@ -1,93 +1,169 @@
 # ATLLArBarrel
+A Geant4 simulation of the ATLAS LAr Barrel beam test setup.<br />
+<br />
+![example workflow](https://github.com/lopezzot/ATLTileCalTB/actions/workflows/geant4-test.yml/badge.svg)
 
+<figure>
+<img src="./images/ATLLArBarrel_img1.png" alt="Trulli" style="width:100%">
+<figcaption align="center"><b>Fig. - 100 GeV electron passing through the geometry setup.</b></figcaption>
+</figure>
+<br/><br/>
 
+<!-- TABLE OF CONTENTS -->
+<details open="open">
+  <summary>Table of Contents</summary>
+  <ol>
+    <li><a href="#project-description">Project description</a></li>
+    <li><a href="#authors-and-contacts">Authors and contacts</a></li>
+    <li><a href="#presentations">Presentations</a></li>
+    <li><a href="#available-datasets-and-analyses">Available datasets and analyses</a></li>
+    <li>
+      <a href="#how-to">How to</a>
+      <ul>
+        <li><a href="#build-compile-and-execute-on-maclinux">Build, compile and execute on Mac/Linux</a></li>
+        <li><a href="#build-compile-and-execute-on-lxplus">Build, compile and execute on lxplus</a></li>
+        <li><a href="#debug-with-lldb">Debug with lldb</a></li>
+      </ul>
+    </li>
+    <li><a href="#g4hepem-integration">G4HepEm integration</a></li>
+    <li><a href="#using-vecgeom">Using VecGeom</a></li>
+  </ol>
+</details>
 
-## Getting started
+<!--Project desription-->
+## Project description
+The project targets a standalone Geant4 simulation of the ATLAS LAr Barrel test beam setup. It is used for Geant4 regression testing and physics lists comparison, as well as for testing speeding up solutions.
+- ⏰ Start date: February 2023
+- 📌 Status: development
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+<!--Authors and contacts-->
+## Authors and contacts
+- 👨‍🔬 Lorenzo Pezzotti (CERN EP-SFT) - lorenzo.pezzotti@cern.ch 
+- 👨‍🔬 Supervisor: Alberto Ribon (CERN EP-SFT)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+<!--Presentations-->
+## Presentations
+- 🗣️ CERN EP-SFT Simulation Meeting 16/5/2023, [Preliminary results from the ATLLArBarrel test](https://indico.cern.ch/event/1286851/contributions/5408207/attachments/2648311/4584631/lopezzot_16_5_2023.pdf)
+- 🗣️ CERN EP-SFT Simulation Meeting 21/3/2023, [Towards a Geant4 ATLAS LAr Barrel Validation Test](https://indico.cern.ch/event/1267983/contributions/5325269/attachments/2615458/4520223/lopezzot_21_3_2023.pdf)
 
-## Add your files
+<!--Available datasets and analyses-->
+## Available datasets and analyses
+We provide datasets and ROOT analyses, as well as instructions for their reproducibility.
+Ask authors for access to datasets.
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+| ATLLArBarrel     | Reproduce data | Reproduce analysis | Comments     |
+| -------------    | ----------     | -----------        | -----------  |
+| v0.3 <br /> Dataset #1 <br /> tag 0.3_1 | Geant4-11.1 <br /> ALLArBarrel v0.3 <br /> ./ATLLArBarrel -m runcards/run_gps.mac -pl FTFP_BERT -t 8 | root -l v0.3/ATLLArBarrelAnalysis.c | Preliminary esults for gamma and pi-, assuming run_gps_output/ is alongside root macro. Created on 15/05/2023. |
 
-```
-cd existing_repo
-git remote add origin https://gitlab.cern.ch/dellacqu/atllarbarrel.git
-git branch -M master
-git push -uf origin master
-```
+<!--How to-->
+## How to
 
-## Integrate with your tools
+### Build, compile and execute on Mac/Linux
+1.  git clone the repo
+    ```sh
+    git clone https://github.com/lopezzot/ATLLArBarrel.git
+    ```
+2.  source Geant4-11.1 env
+    ```sh
+    source /relative_path_to/geant4.11.1-install/bin/geant4.sh
+    ```
+3.  cmake build directory and make (using geant4.11.1)
+    ```sh
+    mkdir build; cd build/
+    cmake -DGeant4_DIR=/absolute_path_to/geant4.11.1-install/lib/Geant4-11.1.0/ relative_path_to/ATLLarBarrel/
+    make
+    ```
+4.  execute (example with run.mac macro card, 2 threads and FTFP_BERT physics list)
+    ```sh
+    ./ATLLarBarrel -m run.mac -t 2 -p FTFP_BERT
+    ```
 
-* [Set up project integrations](https://gitlab.cern.ch/dellacqu/atllarbarrel/-/settings/integrations)
+Parser options
+- `-m macro.mac`: pass a Geant4 macro card (example `-m run.mac` available in source directory and automatically copied in build directory) 
+- `-t integer`: pass number of threads for multi-thread execution (example `-t 2`, default is the number of threads on the machine)
+- `-p Physics_List`: select Geant4 physics list (example `-p FTFP_BERT`)
 
-## Collaborate with your team
+### Build, compile and execute on lxplus
+1. git clone the repo
+   ```sh
+   git clone https://github.com/lopezzot/ATLLArBarrel.git
+   ```
+2. cmake build directory and make (using geant4.11.1, check for gcc and cmake dependencies for other versions)
+   ```sh
+   mkdir build; cd build/
+   source /cvmfs/sft.cern.ch/lcg/contrib/gcc/8.3.0/x86_64-centos7/setup.sh
+   source /cvmfs/geant4.cern.ch/geant4/11.1/x86_64-centos7-gcc8-optdeb-MT/CMake-setup.sh
+   export CXX=`which g++`
+   export CC=`which gcc`
+   cmake3 -DGeant4_DIR= /cvmfs/geant4.cern.ch/geant4/11.1/x86_64-centos7-gcc8-optdeb-MT/lib64/Geant4-11.1.0/ ../ATLLArBarrel/
+   ```
+3. execute (example with TBrun.mac macro card, 2 threads and FTFP_BERT physics list)
+   ```sh
+   ./ATLLArBarrel -m run.mac -t 2 -p FTFP_BERT
+   ```
+### Debug with lldb
+1. Compile with debug compiler option, make and start debugger
+   ```sh
+   cmake -DCMAKE_BUILD_TYPE=Debug -DGeant4_DIR=/path-to/geant4-11.1.0-install/lib/Geant4-11.1.0/ /path-to-dir/ATLLArBarrel/
+   make
+   lldb
+   ```
+2. Set the lldb target and run with arguments
+   ```sh
+   target create ATLLArBarrel
+   run -m run.mac -p FTFP_BERT -t 2
+   ```
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+<!--G4HepEm integration-->
+## G4HepEm integration
 
-## Test and Deploy
+[G4HepEm](https://github.com/mnovak42/g4hepem) is a project from the Geant4 Collaboration targeting a library for speeding up the electromagnetic shower generation.
+G4HepEm is an optional dependency to ATLLarBarrel. The following are istructions for its usage:
+1. Install G4HepEm as described in the [documentation](https://github.com/mnovak42/g4hepem#quick-start)
+2. source geant4 env (example with Geant4-11.1)
+   ```sh
+   source /path-to/geant4-11.1.0/geant4-11.1.0-install/bin/geant4.sh 
+    ```
+3. Build and compile with G4HepEm
+   ```sh
+   cmake -DGeant4_DIR=/path-to/geant4-11.1.0/geant4-11.1.0-install/lib/Geant4-11.1.0/ -DG4HepEm_DIR=/path-to/g4hepem-install/lib/cmake/G4HepEm/ -DWITH_G4HepEm=ON ../ATLLArBarrel/
+   make
+   ```
+4. Execute (example with run.mac macro, 2 threads and FTFP_BERT physics list)
+   ```sh
+   ./ATLLArBarrel -m run.mac -t 2 -p FTFP_BERT
+   ```
+   
+Note: the `-DWITH_G4HepEm=ON` will compile the files under `hepemlib/` that are needed to register the `G4HepEmProcess`. It is possible to use the `G4HepEmTrackingManager` instead of the `G4HepEmProcess` using the CMAKE option `-DWITH_G4HepEmTracking=ON`.
+   ```sh
+   cmake -DGeant4_DIR=/path-to/geant4-11.1.0/geant4-11.1.0-install/lib/Geant4-11.1.0/ -DG4HepEm_DIR=/path-to/g4hepem-install/lib/cmake/G4HepEm/ -DWITH_G4HepEm=ON -DWITH_G4HepEmTracking=ON ../ATLLArBarrel/ 
+   ```
 
-Use the built-in continuous integration in GitLab.
+<!--Using VecGeom-->
+## Using VecGeom
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+[VecGeom](https://gitlab.cern.ch/VecGeom/VecGeom) is a geometry modeller library and optional dependency to Geant4. ATLLArBarrel can be used with VecGeom. The following are my instructions for VecGeom usage:
+1. Install VecGeom (example with VecGeom-v1.2.1)
+   ```sh
+   cd VecGeom-v1.2.1/
+   mkdir build; cd build
+   cmake -DCMAKE_INSTALL_PREFIX=/absolute-path-to/VecGeom-v1.2.1/install/ -DVECGEOM_BUILTIN_VECCORE=ON ..
+   cmake --build .
+   cmake --build . --target install
+   ```
+2. Install Geant4 with VecGeom dependency (example with geant4-11.1.0)
+   ```sh
+   mkdir buildg4vecgeom; cd buildg4vecgeom
+   cmake -DCMAKE_INSTALL_PREFIX=/abolute-path-to/installg4vecgeom -DGEANT4_INSTALL_DATA=ON -DGEANT4_USE_QT=ON -DGEANT4_BUILD_MULTITHREADED=ON -DGEANT4_USE_USOLIDS=ON -DVecGeom_DIR=/abolute-path-to/VecGeom-v1.2.1/install/lib/cmake/VecGeom/ -DGEANT4_USE_GDML=ON /relative-path-to/geant4-11.1.0/
+   make -jN
+   make install
+   ```
+3. Build ATLLArBarrel
+   ```sh
+   git clone https://github.com/lopezzot/ATLLArBarrel.git
+   source /path_to/installg4vecgeom/bin/geant4.sh
+   mkdir build; cd build/
+   cmake -DGeant4_DIR=/absolute-path_to/installg4vecgeom/lib/Geant4-11.1.0/ -DVecGeom_DIR=/abolute-path-to/VecGeom-v1.2.1/install/lib/cmake/VecGeom /relative_path_to/ATLLarBarrel/
+   make
+   ```
+Note: the instructions above build VecGeom in backend scalar mode. To build it in backend vector use this [script](scripts/vecgeom_backendvc_install.sh), then specify `-DVc_DIR` when building the simulation.
