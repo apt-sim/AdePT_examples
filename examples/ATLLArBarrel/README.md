@@ -21,6 +21,7 @@ A Geant4 simulation of the ATLAS LAr Barrel beam test setup.<br />
       <a href="#how-to">How to</a>
       <ul>
         <li><a href="#build-compile-and-execute-on-maclinux">Build, compile and execute on Mac/Linux</a></li>
+        <li><a href="#cmake-options">CMake options</a></li>
         <li><a href="#build-compile-and-execute-on-lxplus">Build, compile and execute on lxplus</a></li>
         <li><a href="#debug-with-lldb">Debug with lldb</a></li>
       </ul>
@@ -73,7 +74,7 @@ Ask authors for access to datasets.
     cmake -DGeant4_DIR=/absolute_path_to/geant4.11.1-install/lib/Geant4-11.1.0/ relative_path_to/ATLLarBarrel/
     make
     ```
-4.  execute (example with run.mac macro card, 2 threads and FTFP_BERT physics list)
+4.  execute (example with run.mac macro card, 2 threads and FTFP_BERT physics list; run.mac requires `-DWITH_GPS=OFF`, see [CMake options](#cmake-options))
     ```sh
     ./ATLLarBarrel -m run.mac -t 2 -p FTFP_BERT
     ```
@@ -82,6 +83,21 @@ Parser options
 - `-m macro.mac`: pass a Geant4 macro card (example `-m run.mac` available in source directory and automatically copied in build directory) 
 - `-t integer`: pass number of threads for multi-thread execution (example `-t 2`, default is the number of threads on the machine)
 - `-p Physics_List`: select Geant4 physics list (example `-p FTFP_BERT`)
+
+### CMake options
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `WITH_GEANT4_UIVIS` | `ON` | Build with Geant4 UI and Vis drivers (`OFF` for a batch mode only executable) |
+| `WITH_GPS` | `ON` | Use `G4GeneralParticleSource` as primary generator (`/gps/` macro commands). Set to `OFF` to use `G4ParticleGun` (`/gun/` macro commands) |
+| `WITH_G4HepEm` | `OFF` | Build with G4HepEm, see [G4HepEm integration](#g4hepem-integration) |
+| `WITH_G4HepEmTracking` | `OFF` | Use the G4HepEm specialized tracking, see [G4HepEm integration](#g4hepem-integration) |
+
+Note: the macros `run.mac` and `runcards/run.mac` use `/gun/` commands and need `-DWITH_GPS=OFF`; the other macros in `runcards/` (e.g. `runcards/run_gps.mac`) use `/gps/` commands and need the default `-DWITH_GPS=ON`. Using a macro with the wrong option stops the run with `COMMAND NOT FOUND`.
+```sh
+cmake -DGeant4_DIR=/absolute_path_to/geant4-install/lib64/cmake/Geant4/ -DWITH_GPS=OFF relative_path_to/ATLLArBarrel/
+```
+
+Note: the `cmake/` directory contains a `FindEXPAT.cmake` wrapper that drops the expat version requirement recorded by Geant4. It allows building against a Geant4 installation configured with a non-system expat (e.g. from Linuxbrew) while linking the system expat. When building Geant4 yourself, `-DGEANT4_USE_SYSTEM_EXPAT=OFF` avoids the issue altogether.
 
 ### Build, compile and execute on lxplus
 1. git clone the repo
