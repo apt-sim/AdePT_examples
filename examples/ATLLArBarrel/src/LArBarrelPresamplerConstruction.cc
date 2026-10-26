@@ -12,6 +12,7 @@
 //Includers from project files
 //
 #include "LArBarrelPresamplerConstruction.hh"
+#include "MaterialManager.hh"
 
 //Includers from Geant4
 //
@@ -46,62 +47,81 @@ LArBarrelPresamplerConstruction::~LArBarrelPresamplerConstruction(){}
 G4LogicalVolume* LArBarrelPresamplerConstruction::GetEnvelope(){
 
     
-    G4String name,symbol;
-    G4double a,z,density,fractionmass;
-    G4int ncomponents,natoms;
+    G4String name;
+    G4double density,fractionmass;
+    G4int natoms;
 
-    a = 12.011*CLHEP::g/CLHEP::mole;
-    G4Element* Carbon = new G4Element(name="Carbon", symbol = "C" , z=6, a);
+    //Common materials are defined in MaterialManager,
+    //elements are taken from NIST
+    //
+    auto matMgr = MaterialManager::GetInstance();
+    G4Element* Carbon = matMgr->GetElement("C");
+    G4Element* Nitrogen = matMgr->GetElement("N");
+    G4Element* Copper = matMgr->GetElement("Cu");
+    G4Element* Hydrogen = matMgr->GetElement("H");
+    G4Element* Oxygen = matMgr->GetElement("O");
 
-    a = 14.0067*CLHEP::g/CLHEP::mole;
-    G4Element* Nitrogen = new G4Element(name="Nitrogen", symbol = "N" , z=7, a);
+    G4Material* LAr = matMgr->GetMaterial("LiquidArgon");
 
-    a = 63.546*CLHEP::g/CLHEP::mole;
-    G4Element* Copper = new G4Element(name="Copper", symbol = "Cu" , z=29, a);
+    if( !matMgr->IsDefined("FR4") ){
+        density = 1.9*CLHEP::g/CLHEP::cm3;
+        G4Material* FR4 = new G4Material("FR4",density,3);
+        FR4->AddElement(Hydrogen, natoms=14);
+        FR4->AddElement(Carbon, natoms=8);
+        FR4->AddElement(Oxygen, natoms=4);
+        matMgr->AddMaterial(FR4);
+    }
+    G4Material* FR4 = matMgr->GetMaterial("FR4");
 
-    a = 1.00797*CLHEP::g/CLHEP::mole;
-    G4Element* Hydrogen = new G4Element(name="Hydrogen", symbol = "H" , z=1, a);
+    //Kapton with different density than the common "Kapton"
+    //
+    if( !matMgr->IsDefined("Kapton_Presampler") ){
+        density = 1.42*CLHEP::g/CLHEP::cm3;
+        G4Material* Kapton = new G4Material("Kapton_Presampler",density,4);
+        Kapton->AddElement(Carbon, natoms=22);
+        Kapton->AddElement(Hydrogen, natoms=10);
+        Kapton->AddElement(Oxygen, natoms=5);
+        Kapton->AddElement(Nitrogen, natoms=2);
+        matMgr->AddMaterial(Kapton);
+    }
+    G4Material* Kapton = matMgr->GetMaterial("Kapton_Presampler");
 
-    a = 39.948*CLHEP::g/CLHEP::mole;
-    density = 1.396*CLHEP::g/CLHEP::cm3;
-    G4Material* LAr = new G4Material(name="LiquidArgon",18.,a, density);
+    if( !matMgr->IsDefined("MBMat") ){
+        density = 2.24*CLHEP::g/CLHEP::cm3;
+        G4Material* MBMat = new G4Material("MBMat",density,2);
+        MBMat->AddMaterial(FR4, fractionmass=80.75*CLHEP::perCent);
+        MBMat->AddElement(Copper, fractionmass=19.25*CLHEP::perCent);
+        matMgr->AddMaterial(MBMat);
+    }
+    G4Material* MBMat = matMgr->GetMaterial("MBMat");
 
-    a = 15.9995*CLHEP::g/CLHEP::mole;
-    G4Element* Oxygen = new G4Element(name="Oxygen", symbol = "O" , z=8, a);
+    if( !matMgr->IsDefined("AnodeMat") ){
+        density = 3.06*CLHEP::g/CLHEP::cm3;
+        G4Material* AnodeMat = new G4Material("AnodeMat",density,2);
+        AnodeMat->AddElement(Copper, fractionmass=48.1*CLHEP::perCent);
+        AnodeMat->AddMaterial(FR4, fractionmass=51.9*CLHEP::perCent);
+        matMgr->AddMaterial(AnodeMat);
+    }
+    G4Material* AnodeMat = matMgr->GetMaterial("AnodeMat");
 
-    density = 1.9*CLHEP::g/CLHEP::cm3;
-    G4Material* FR4 = new G4Material(name="FR4",density,ncomponents=3);
-    FR4->AddElement(Hydrogen, natoms=14);
-    FR4->AddElement(Carbon, natoms=8);
-    FR4->AddElement(Oxygen, natoms=4);
+    if( !matMgr->IsDefined("CathodeMat") ){
+        density = 3.73*CLHEP::g/CLHEP::cm3;
+        G4Material* CathodeMat = new G4Material("CathodeMat",density,2);
+        CathodeMat->AddElement(Copper, fractionmass=62.27*CLHEP::perCent);
+        CathodeMat->AddMaterial(FR4, fractionmass=37.73*CLHEP::perCent);
+        matMgr->AddMaterial(CathodeMat);
+    }
+    G4Material* CathodeMat = matMgr->GetMaterial("CathodeMat");
 
-    density = 1.42*CLHEP::g/CLHEP::cm3;
-    G4Material* Kapton = new G4Material(name="Kapton",density,ncomponents=4);
-    Kapton->AddElement(Carbon, natoms=22);
-    Kapton->AddElement(Hydrogen, natoms=10);
-    Kapton->AddElement(Oxygen, natoms=5);
-    Kapton->AddElement(Nitrogen, natoms=2);
-
-    density = 2.24*CLHEP::g/CLHEP::cm3;
-    G4Material* MBMat = new G4Material(name="MBMat",density,ncomponents=2);
-    MBMat->AddMaterial(FR4, fractionmass=80.75*CLHEP::perCent);
-    MBMat->AddElement(Copper, fractionmass=19.25*CLHEP::perCent);
-
-    density = 3.06*CLHEP::g/CLHEP::cm3;
-    G4Material* AnodeMat = new G4Material(name="AnodeMat",density,ncomponents=2);
-    AnodeMat->AddElement(Copper, fractionmass=48.1*CLHEP::perCent);
-    AnodeMat->AddMaterial(FR4, fractionmass=51.9*CLHEP::perCent);
-
-    density = 3.73*CLHEP::g/CLHEP::cm3;
-    G4Material* CathodeMat = new G4Material(name="CathodeMat",density,ncomponents=2);
-    CathodeMat->AddElement(Copper, fractionmass=62.27*CLHEP::perCent);
-    CathodeMat->AddMaterial(FR4, fractionmass=37.73*CLHEP::perCent);
-
-    density = 3.98*CLHEP::g/CLHEP::cm3;
-    G4Material* ConnecMat = new G4Material(name="ConnecMat",density,ncomponents=3);
-    ConnecMat->AddElement(Copper, fractionmass=54.2*CLHEP::perCent);
-    ConnecMat->AddMaterial(Kapton, fractionmass=38.7*CLHEP::perCent);
-    ConnecMat->AddMaterial(LAr, fractionmass=7.1*CLHEP::perCent);
+    if( !matMgr->IsDefined("ConnecMat") ){
+        density = 3.98*CLHEP::g/CLHEP::cm3;
+        G4Material* ConnecMat = new G4Material("ConnecMat",density,3);
+        ConnecMat->AddElement(Copper, fractionmass=54.2*CLHEP::perCent);
+        ConnecMat->AddMaterial(Kapton, fractionmass=38.7*CLHEP::perCent);
+        ConnecMat->AddMaterial(LAr, fractionmass=7.1*CLHEP::perCent);
+        matMgr->AddMaterial(ConnecMat);
+    }
+    G4Material* ConnecMat = matMgr->GetMaterial("ConnecMat");
 
     //Use a contraction factor 
     //G4double cmm;

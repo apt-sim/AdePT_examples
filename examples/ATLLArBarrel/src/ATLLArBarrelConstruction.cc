@@ -10,7 +10,6 @@
 //Includers from Geant4
 //
 #include "G4Material.hh"
-#include "G4Element.hh"
 #include "G4Box.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4LogicalVolume.hh"
@@ -26,6 +25,7 @@
 #include "ATLLArBarrelConstruction.hh"
 #include "ATLLArBarrelSensDet.hh"
 #include "LArTBCryostatConstruction.hh"
+#include "MaterialManager.hh"
 
 ATLLArBarrelConstruction::ATLLArBarrelConstruction()
     : G4VUserDetectorConstruction(),
@@ -35,20 +35,9 @@ ATLLArBarrelConstruction::~ATLLArBarrelConstruction(){};
 
 G4VPhysicalVolume* ATLLArBarrelConstruction::Construct(){
 
-    G4String name,symbol;
-    G4double a,z,density;
-    G4int ncomponents;
-
-    a = 16.00*g/mole;
-    G4Element* elO = new G4Element(name="Oxygen", symbol="O", z=8., a);
-
-    a= 14.01*g/mole;
-    G4Element* elN = new G4Element(name="Nitrogen", symbol="N", z=7., a);
-
-    density = 1.29e-03*g/cm3;
-    G4Material* Air = new G4Material(name="Air", density, ncomponents=2);
-    Air->AddElement(elN, .8); 
-    Air->AddElement(elO, .2);
+    //Air is defined in MaterialManager
+    //
+    G4Material* Air = MaterialManager::GetInstance()->GetMaterial("Air");
 
     // The Experimental Hall
     //

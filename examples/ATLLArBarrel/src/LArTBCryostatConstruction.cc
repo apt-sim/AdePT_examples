@@ -14,10 +14,11 @@
 #include "LArTBCryostatConstruction.hh"
 #include "LArBarrelConstruction.hh"
 #include "LArBarrelPresamplerConstruction.hh"
+#include "MaterialManager.hh"
 
 //Includers from Geant4
 //
-#include "G4NistManager.hh"
+#include "G4Material.hh"
 #include "G4Box.hh"
 #include "G4Cons.hh"
 #include "G4Orb.hh"
@@ -36,80 +37,53 @@ LArTBCryostatConstruction::~LArTBCryostatConstruction(){}
 G4LogicalVolume* LArTBCryostatConstruction::GetEnvelope() {
 
     G4cout<<"->in LArTBCryostatConstruction::GetEnvelope()"<<G4endl;
-    G4String name,symbol;
-    G4double a,z,density,fractionmass;
+    G4double density;
     G4double X0,IntL;
-    G4int ncomponents,natoms;
+    G4int natoms;
 
-    // Hydrogen
+    //Common materials are defined in MaterialManager,
+    //elements are taken from NIST
     //
-    a= 1.01*g/mole;
-    G4Element *elH = new G4Element(name="Hydrogen", symbol="H", z=1., a);
- 
-    // Carbon
-    //
-    a= 12.01*g/mole;
-    G4Element *elC = new G4Element(name="Carbon", symbol="C", z=6., a);
-    
-    // Oxygen
-    //
-    a = 16.00*g/mole;
-    G4Element *elO = new G4Element(name="Oxygen", symbol="O", z=8., a);
-
-    // Nitrogen
-    //
-    a= 14.01*g/mole;
-    G4Element *elN = new G4Element(name="Nitrogen", symbol="N", z=7., a);
+    auto matMgr = MaterialManager::GetInstance();
 
     // Aluminium
     //
-    a = 26.98*g/mole;
-    density = 2.70*g/cm3;
-    G4Material * Aluminium = new G4Material(name="Aluminium",13.,a, density);
+    G4Material * Aluminium = matMgr->GetMaterial("Aluminium");
     X0 = Aluminium->GetRadlen();
     IntL = Aluminium->GetNuclearInterLength();
     std::cout << "Alu  X0/lambda " << X0 << " " << IntL << std::endl;
 
     // Iron
     //
-    a = 55.845*g/mole;
-    density = 7.87*g/cm3;
-    G4Material * Iron = new G4Material(name="Iron",26.,a,density);
+    G4Material * Iron = matMgr->GetMaterial("Iron");
 
     // Define Material FOAM  ( C5H8O2 )
     // latest density value from P.Puzo (october 2003)
     //
-    density = 0.058*g/cm3;
-    G4Material * Foam = new G4Material(name="Foam", density, ncomponents=3);
-    Foam->AddElement(elH,natoms=8);
-    Foam->AddElement(elC,natoms=5);
-    Foam->AddElement(elO,natoms=2);
+    if( !matMgr->IsDefined("Foam") ){
+        density = 0.058*g/cm3;
+        G4Material * Foam = new G4Material("Foam", density, 3);
+        Foam->AddElement(matMgr->GetElement("H"),natoms=8);
+        Foam->AddElement(matMgr->GetElement("C"),natoms=5);
+        Foam->AddElement(matMgr->GetElement("O"),natoms=2);
+        matMgr->AddMaterial(Foam);
+    }
+    G4Material * Foam = matMgr->GetMaterial("Foam");
     X0 = Foam->GetRadlen();
     IntL = Foam->GetNuclearInterLength();
     std::cout << "Foam X0/lambda " << X0 << " " << IntL << std::endl;
 
     // Air
     //
-    density = 1.29e-03*g/cm3;
-    G4Material * Air = new G4Material(name="Air", density, ncomponents=2);
-    Air->AddElement(elN, fractionmass=.8);
-    Air->AddElement(elO, fractionmass=.2);
+    G4Material * Air = matMgr->GetMaterial("Air");
 
     // liquid Argon
     //
-    a = 39.948*g/mole;
-    density = 1.396*g/cm3;
-    G4Material * LAr = new G4Material(name="LiquidArgon",18.,a, density);
+    G4Material * LAr = matMgr->GetMaterial("LiquidArgon");
 
     // Vacuum
     //
-    density = CLHEP::universe_mean_density;  //from PhysicalConstants.h
-    G4double pressure = 3.e-18*pascal;
-    G4double temperature = 2.73*kelvin;
-    G4Material *
-    Vacuum =
-        new G4Material(name="Vacuum", z=1., a=1.01*g/mole, density,
-                       kStateGas,temperature,pressure);
+    G4Material * Vacuum = matMgr->GetMaterial("Vacuum");
 
 
     //--------------------------------------------------

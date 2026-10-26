@@ -12,6 +12,7 @@
 //Includers from project files
 //
 #include "LArBarrelConstruction.hh"
+#include "MaterialManager.hh"
 
 //Includers from Geant4
 //
@@ -60,138 +61,57 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
     // Elements , Mixtures and Materials 
     //---------------------------------------------------------------------------
   
-    G4String name,symbol;
-    G4double a,z,density,fractionmass;
-    G4double dalu,dlead,dlar,dglue,dfe,dcu,dkapton,dGten,dmixelec;
-    G4int ncomponents,natoms;
+    G4String name;
+    G4double density,fractionmass;
+    G4double dlead,dlar,dglue,dfe,dcu,dkapton,dGten;
+    G4int natoms;
 
-    /*#ifdef DEBUG_GEO
-    std::cout << " " << std::endl;
-    std::cout << " ** Material list " << std::endl;
-    #endif*/
+    //Common materials are defined in MaterialManager,
+    //elements are taken from NIST
+    //
+    auto matMgr = MaterialManager::GetInstance();
 
-    // Vacuum
-    density = CLHEP::universe_mean_density;  //from PhysicalConstants.h
-    G4double pressure = 3.e-18*CLHEP::pascal;
-    G4double temperature = 2.73*CLHEP::kelvin;
-    G4Material * Vacuum =
-    	new G4Material(name="Vacuum", z=1., a=1.01*CLHEP::g/CLHEP::mole, density,
-    		       kStateGas,temperature,pressure); 
+    G4Material * Lead = matMgr->GetMaterial("Lead");
+    dlead = Lead->GetDensity();
 
-    /*#ifdef DEBUG_GEO
-    std::cout << " Vacuum X0 = " << Vacuum->GetRadlen() << std::endl;
-    #endif*/
+    G4Material * LAr = matMgr->GetMaterial("LiquidArgon");
+    dlar = LAr->GetDensity();
 
-    // Copper
-    a = 63.55*CLHEP::g/CLHEP::mole;
-    density = 8.96*CLHEP::g/CLHEP::cm3;
-    G4Material * Copper = new G4Material(name="Copper",29.,a, density);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Copper X0 = " << Copper->GetRadlen() << std::endl;
-    #endif*/
+    G4Material * Kapton = matMgr->GetMaterial("Kapton");
+    dkapton = Kapton->GetDensity();
 
-    // Aluminium
-    a = 26.98*CLHEP::g/CLHEP::mole;
-    density = 2.70*CLHEP::g/CLHEP::cm3;
-    dalu = density;
-    G4Material *  Aluminium = new G4Material(name="Aluminium",13.,a, density);	
-    /*#ifdef DEBUG_GEO
-    std::cout << " Alumin X0/lambda = " << Aluminium->GetRadlen() 
-            << " " << Aluminium->GetNuclearInterLength() << std::endl;
-    #endif*/
-  
-    // Lead
-    a = 207.19*CLHEP::g/CLHEP::mole;
-    density = 11.35*CLHEP::g/CLHEP::cm3;
-    dlead = density;
-    G4Material * Lead = new G4Material(name="Lead",82.,a, density);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Lead   X0/lambda = " << Lead->GetRadlen() 
-            << " " << Lead->GetNuclearInterLength() << std::endl;
-    #endif*/
+    G4Material * Copper = matMgr->GetMaterial("Copper");
+    dcu = Copper->GetDensity();
 
-    // liquid Argon
-    a = 39.948*CLHEP::g/CLHEP::mole;
-    density = 1.396*CLHEP::g/CLHEP::cm3;
-    dlar = density;
-    G4Material *  LAr = new G4Material(name="LiquidArgon",18.,a, density);
-    /*#ifdef DEBUG_GEO
-    std::cout << " LAr    X0/lambda = " << LAr->GetRadlen() 
-            << " " << LAr->GetNuclearInterLength() << std::endl;
-    #endif*/
-
-    // Argon
-    a = 39.95*CLHEP::g/CLHEP::mole;
-    G4Element *elAr = new G4Element(name="Argon", symbol="Ar", z=18., a);
-
-    // Oxygen
-    a = 16.00*CLHEP::g/CLHEP::mole;
-    G4Element *elO = new G4Element(name="Oxygen", symbol="O", z=8., a);
- 
-    // Nitrogen 
-    a= 14.01*CLHEP::g/CLHEP::mole;
-    G4Element *elN = new G4Element(name="Nitrogen", symbol="N", z=7., a);
-
-    // Air
-    density = 1.29e-03*CLHEP::g/CLHEP::cm3;
-    G4Material *  Air = new G4Material(name="Air", density, ncomponents=2);
-    Air->AddElement(elN, fractionmass=.8); 
-    Air->AddElement(elO, fractionmass=.2);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Air    X0 = " << Air->GetRadlen() << std::endl;
-    #endif*/
- 
-    // Hydrogen
-    a= 1.01*CLHEP::g/CLHEP::mole;
-    G4Element *elH = new G4Element(name="Hydrogen", symbol="H", z=1., a);
-
-    // Carbon
-    a= 12.01*CLHEP::g/CLHEP::mole;
-    G4Element *elC = new G4Element(name="Carbon", symbol="C", z=6., a);
-
-    // Silicium
-    a= 28.09*CLHEP::g/CLHEP::mole;
-    G4Element *elSi = new G4Element(name="Silicium", symbol="Si", z=14., a);
+    G4Element *elAr = matMgr->GetElement("Ar");
+    G4Element *elO = matMgr->GetElement("O");
+    G4Element *elH = matMgr->GetElement("H");
+    G4Element *elC = matMgr->GetElement("C");
+    G4Element *elSi = matMgr->GetElement("Si");
+    G4Element *elFe = matMgr->GetElement("Fe");
+    G4Element *elCu = matMgr->GetElement("Cu");
 
     // Glue  raw formula  C5 H8 O4 Si
-    density = 1.69*CLHEP::g/CLHEP::cm3;
-    dglue = density;
-    G4Material *Glue = new G4Material(name="Glue", density, ncomponents=4);
-    Glue->AddElement(elH,natoms=8); 
-    Glue->AddElement(elO,natoms=4);
-    Glue->AddElement(elC,natoms=5);
-    Glue->AddElement(elSi,natoms=1);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Glue   X0/Lambda = " << Glue->GetRadlen() 
-            << " " << Glue->GetNuclearInterLength() << std::endl;
-    #endif*/
+    if( !matMgr->IsDefined("Glue") ){
+        density = 1.69*CLHEP::g/CLHEP::cm3;
+        G4Material *Glue = new G4Material("Glue", density, 4);
+        Glue->AddElement(elH,natoms=8); 
+        Glue->AddElement(elO,natoms=4);
+        Glue->AddElement(elC,natoms=5);
+        Glue->AddElement(elSi,natoms=1);
+        matMgr->AddMaterial(Glue);
+    }
+    G4Material *Glue = matMgr->GetMaterial("Glue");
+    dglue = Glue->GetDensity();
 
-    // Define Material Kapton (C22 H10 O5 N2)
-    density = 1.46*CLHEP::g/CLHEP::cm3;
-    dkapton = density;
-    G4Material* Kapton = new G4Material(name="Kapton",density,ncomponents=4);
-    Kapton->AddElement(elH,natoms=10);
-    Kapton->AddElement(elO,natoms=5);
-    Kapton->AddElement(elC,natoms=22);
-    Kapton->AddElement(elN,natoms=2);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Kapton X0/Lambda = " << Kapton->GetRadlen() 
-            << " " << Kapton->GetNuclearInterLength() << std::endl;
-    #endif*/
-
-    // Iron
-    a = 55.85*CLHEP::g/CLHEP::mole;
-    density = 7.87*CLHEP::g/CLHEP::cm3;
-    dfe = density;
-    G4Element *elFe = new G4Element(name="Iron", symbol="Fe", z=26., a);
-
-    G4Material *Iron = new G4Material(name="Iron",26.,a, density);
-
-    // Copper
-    a = 63.64*CLHEP::g/CLHEP::mole;
-    density = 8.96*CLHEP::g/CLHEP::cm3;
-    dcu = density;
-    G4Element *elCu = new G4Element(name="Coper", symbol="Cu", z=29., a);
+    // Iron (A differs from the common "Iron")
+    if( !matMgr->IsDefined("Iron_EMB") ){
+        G4double a = 55.85*CLHEP::g/CLHEP::mole;
+        density = 7.87*CLHEP::g/CLHEP::cm3;
+        matMgr->AddMaterial(new G4Material("Iron_EMB",26.,a, density));
+    }
+    G4Material *Iron = matMgr->GetMaterial("Iron_EMB");
+    dfe = Iron->GetDensity();
 
     // Define THIN and THICK lead absorbers
     G4double Totalthick;
@@ -206,26 +126,20 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
     Tgfe = 0.04*cm; //from atlas db and MySqlEMB.cxx
     //Tgpb = m_parameters->GetValue("LArEMBThinAbsLead");
     Tgpb = 0.1131*cm; //from atlas db and MySqlEMB.cxx
-    Totalthick = Tggl+Tgfe+Tgpb;
-    Totalmass = (Tgpb*dlead+Tgfe*dfe+Tggl*dglue);
-    Fracpb = (Tgpb*dlead)/Totalmass;
-    Fracfe = (Tgfe*dfe)/Totalmass;
-    Fracgl = (Tggl*dglue)/Totalmass;
-    density = Totalmass/Totalthick;
-    /*#ifdef DEBUG_GEO
-    std::cout<<"\n ---- THIN absorber characteristics: ----" << std::endl;
-    std::cout<<"  Fraction pb,fe,gl: "<<Fracpb<<","<<Fracfe<<","<<Fracgl<< std::endl;
-    std::cout<<"  Total mass, Thickness: "<<Totalmass<<" ,"<<Totalthick<< std::endl;
-    std::cout<<"  Thinabs Density =  "<< density/(g/cm3) << "\n" << std::endl;
-    #endif*/
-    G4Material * Thin_abs = new G4Material(name="Thinabs",density,ncomponents=3);
-    Thin_abs->AddMaterial(Lead,Fracpb);
-    Thin_abs->AddElement(elFe,Fracfe);
-    Thin_abs->AddMaterial(Glue,Fracgl);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Thin absorber  X0/lambda = " << Thin_abs->GetRadlen() 
-            << " " << Thin_abs->GetNuclearInterLength() << std::endl;
-    #endif*/
+    if( !matMgr->IsDefined("Thinabs") ){
+        Totalthick = Tggl+Tgfe+Tgpb;
+        Totalmass = (Tgpb*dlead+Tgfe*dfe+Tggl*dglue);
+        Fracpb = (Tgpb*dlead)/Totalmass;
+        Fracfe = (Tgfe*dfe)/Totalmass;
+        Fracgl = (Tggl*dglue)/Totalmass;
+        density = Totalmass/Totalthick;
+        G4Material * Thin_abs = new G4Material("Thinabs",density,3);
+        Thin_abs->AddMaterial(Lead,Fracpb);
+        Thin_abs->AddElement(elFe,Fracfe);
+        Thin_abs->AddMaterial(Glue,Fracgl);
+        matMgr->AddMaterial(Thin_abs);
+    }
+    G4Material * Thin_abs = matMgr->GetMaterial("Thinabs");
 
     // THICK absorber
     //Thgl = m_parameters->GetValue("LArEMBThickAbsGlue");
@@ -234,27 +148,20 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
     Thfe = 0.04*cm; //from athena db and MySqlEMB.cxx
     //Thpb = m_parameters->GetValue("LArEMBThickAbsLead");
     Thpb = 0.1532*cm; //from athena db and MySqlEMB.cxx
-    Totalthick = Thgl+Thfe+Thpb;
-    Totalmass = (Thpb*dlead+Thfe*dfe+Thgl*dglue);
-    Fracpb = (Thpb*dlead)/Totalmass;
-    Fracfe = (Thfe*dfe)/Totalmass;
-    Fracgl = (Thgl*dglue)/Totalmass;
-    density = Totalmass/Totalthick;
-    /*#ifdef DEBUG_GEO
-    std::cout<<"\n ---- THICK absorber characteristics: ----" << std::endl;
-    std::cout<<"  Fraction pb,fe,gl: "<<Fracpb<<","<<Fracfe<<","<<Fracgl<< std::endl;
-    std::cout<<"  Total mass, Thickness: "<<Totalmass<<" ,"<<Totalthick<< std::endl;
-    std::cout<<"  Thickabs Density =  " << density/(g/cm3) << " \n" << std::endl;
-    #endif*/
-    G4Material * Thick_abs = new G4Material(name="Thickabs",density,ncomponents=3);
-    Thick_abs->AddMaterial(Lead,Fracpb);
-    Thick_abs->AddElement(elFe,Fracfe);
-    Thick_abs->AddMaterial(Glue,Fracgl);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Thick absorber X0/lambda = " << Thick_abs->GetRadlen() 
-            << " " << Thick_abs->GetNuclearInterLength() << std::endl;
-    #endif*/
-
+    if( !matMgr->IsDefined("Thickabs") ){
+        Totalthick = Thgl+Thfe+Thpb;
+        Totalmass = (Thpb*dlead+Thfe*dfe+Thgl*dglue);
+        Fracpb = (Thpb*dlead)/Totalmass;
+        Fracfe = (Thfe*dfe)/Totalmass;
+        Fracgl = (Thgl*dglue)/Totalmass;
+        density = Totalmass/Totalthick;
+        G4Material * Thick_abs = new G4Material("Thickabs",density,3);
+        Thick_abs->AddMaterial(Lead,Fracpb);
+        Thick_abs->AddElement(elFe,Fracfe);
+        Thick_abs->AddMaterial(Glue,Fracgl);
+        matMgr->AddMaterial(Thick_abs);
+    }
+    G4Material * Thick_abs = matMgr->GetMaterial("Thickabs");
 
     // Define electrode as a mixture Kapton+Cu
     // Note:
@@ -265,55 +172,50 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
     Thcu = 0.0105*cm; //from athena db and MySqlEMB.cxx
     //Thfg = m_parameters->GetValue("LArEMBThickElecKapton");
     Thfg = 0.017*cm; //from athena db and MySqlEMB.cxx 
-    Totalthicke = Thcu+Thfg;
-    Totalmasse = (Thcu*dcu+Thfg*dkapton);
-    FracCu = (Thcu*dcu)/Totalmasse;
-    FracKap = (Thfg*dkapton)/Totalmasse;
-    density = Totalmasse/Totalthicke;
-    /*#ifdef DEBUG_GEO
-    std::cout<<"\n ---- Electrode characteristics: ----" << std::endl;
-    std::cout<<"  Fraction Cu, Kapton: " << FracCu << "," << FracKap << std::endl;
-    std::cout<<"  Total mass, Thickness:"<<Totalmasse<<" ,"<<Totalthicke<< std::endl;
-    std::cout<<"  Electrode Density =  " << density/(g/cm3) << "\n " << std::endl;
-    #endif*/
-    G4Material * Kapton_Cu = new G4Material(name="KaptonC",density,ncomponents=2);
-    Kapton_Cu->AddElement(elCu,FracCu);
-    Kapton_Cu->AddMaterial(Kapton,FracKap);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Electrode     X0/Lambda = " << Kapton_Cu->GetRadlen() 
-            << " " << Kapton_Cu->GetNuclearInterLength() << std::endl;
-    #endif*/
+    if( !matMgr->IsDefined("KaptonC") ){
+        Totalthicke = Thcu+Thfg;
+        Totalmasse = (Thcu*dcu+Thfg*dkapton);
+        FracCu = (Thcu*dcu)/Totalmasse;
+        FracKap = (Thfg*dkapton)/Totalmasse;
+        density = Totalmasse/Totalthicke;
+        G4Material * Kapton_Cu = new G4Material("KaptonC",density,2);
+        Kapton_Cu->AddElement(elCu,FracCu);
+        Kapton_Cu->AddMaterial(Kapton,FracKap);
+        matMgr->AddMaterial(Kapton_Cu);
+    }
+    G4Material * Kapton_Cu = matMgr->GetMaterial("KaptonC");
 
     // Define Material GTEN_epoxy  ( C8 H14 O4 )
     //density = m_parameters->GetValue("LArEMBEpoxyVolumicMass");
-    density = 1.8*g/cm; //from atlas fb and MySqlEMB.cxx
-    dGten = density;
-    G4Material * Gten = new G4Material(name="Gten", density, ncomponents=3);
-    Gten->AddElement(elH,natoms=14); 
-    Gten->AddElement(elO,natoms=4);
-    Gten->AddElement(elC,natoms=8);
-    /*#ifdef DEBUG_GEO
-    std::cout << " G10           density   = " << density/(CLHEP::g/CLHEP::cm3) << std::endl;
-    std::cout << " G10           X0/Lambda = " << Gten->GetRadlen() 
-            << " " << Gten->GetNuclearInterLength() << std::endl;
-    #endif*/
+    if( !matMgr->IsDefined("Gten") ){
+        density = 1.8*g/cm; //from atlas fb and MySqlEMB.cxx
+        G4Material * Gten = new G4Material("Gten", density, 3);
+        Gten->AddElement(elH,natoms=14); 
+        Gten->AddElement(elO,natoms=4);
+        Gten->AddElement(elC,natoms=8);
+        matMgr->AddMaterial(Gten);
+    }
+    G4Material * Gten = matMgr->GetMaterial("Gten");
+    dGten = Gten->GetDensity();
 
     // Define Material SiO2
-    G4Material *SiO2 = new G4Material(name="SiO2",density,ncomponents=2);
-    SiO2->AddElement(elSi,natoms=1);
-    SiO2->AddElement(elO,natoms=2);
+    if( !matMgr->IsDefined("SiO2") ){
+        G4Material *SiO2 = new G4Material("SiO2",dGten,2);
+        SiO2->AddElement(elSi,natoms=1);
+        SiO2->AddElement(elO,natoms=2);
+        matMgr->AddMaterial(SiO2);
+    }
+    G4Material *SiO2 = matMgr->GetMaterial("SiO2");
 
     // Define Material mixture of GTEN_eopxy and SiO2 for the Bars
-    density = 1.72*CLHEP::g/CLHEP::cm3;
-    G4Material *Gten_bar = new G4Material(name="Gten_bar",density,ncomponents=2);
-    Gten_bar->AddMaterial(Gten,fractionmass=0.38);
-    Gten_bar->AddMaterial(SiO2,fractionmass=0.62);
-    /*#ifdef DEBUG_GEO
-    std::cout << " G10_bar       density   = " << density/(g/cm3) << std::endl;
-    std::cout << " G10_bar       X0/Lambda = " << Gten_bar->GetRadlen()
-            << " " << Gten_bar->GetNuclearInterLength() << std::endl;
-    #endif*/
-
+    if( !matMgr->IsDefined("Gten_bar") ){
+        density = 1.72*CLHEP::g/CLHEP::cm3;
+        G4Material *Gten_bar = new G4Material("Gten_bar",density,2);
+        Gten_bar->AddMaterial(Gten,fractionmass=0.38);
+        Gten_bar->AddMaterial(SiO2,fractionmass=0.62);
+        matMgr->AddMaterial(Gten_bar);
+    }
+    G4Material *Gten_bar = matMgr->GetMaterial("Gten_bar");
 
     // Define Material ELECTRONICS:
     //
@@ -322,18 +224,18 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
     //                            and Copper 
     // GU 4/6/2004 compute density from input parameters
     //  density = 2.440*g/cm3;
-    //double frmassCu = m_parameters->GetValue("LArEMBmasspercentCu");
-    double frmassCu = 62; //from atlas db and MySqlEMB.cxx
-    //double frmassKap = m_parameters->GetValue("LArEMBmasspercentKap");
-    double frmassKap = 39; //from atlas fb and MySqlEMB.cxx
-    density = dcu*(1.+frmassKap/frmassCu)/(1.+frmassKap/frmassCu*dcu/dkapton);
-    G4Material * Cable_elect = new G4Material(name="Cables",density,ncomponents=2);
-    Cable_elect->AddElement(elCu, fractionmass=frmassCu*CLHEP::perCent);
-    Cable_elect->AddMaterial(Kapton, fractionmass=frmassKap*CLHEP::perCent);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Cable    X0/lambda= " << Cable_elect->GetRadlen() 
-            << " " << Cable_elect->GetNuclearInterLength() << std::endl;
-    #endif*/
+    if( !matMgr->IsDefined("Cables") ){
+        //double frmassCu = m_parameters->GetValue("LArEMBmasspercentCu");
+        double frmassCu = 62; //from atlas db and MySqlEMB.cxx
+        //double frmassKap = m_parameters->GetValue("LArEMBmasspercentKap");
+        double frmassKap = 39; //from atlas fb and MySqlEMB.cxx
+        density = dcu*(1.+frmassKap/frmassCu)/(1.+frmassKap/frmassCu*dcu/dkapton);
+        G4Material * Cable_elect = new G4Material("Cables",density,2);
+        Cable_elect->AddElement(elCu, fractionmass=frmassCu*CLHEP::perCent);
+        Cable_elect->AddMaterial(Kapton, fractionmass=frmassKap*CLHEP::perCent);
+        matMgr->AddMaterial(Cable_elect);
+    }
+    G4Material * Cable_elect = matMgr->GetMaterial("Cables");
 
     //
     // Define Material Electronics MOTHER_BOARDS
@@ -343,53 +245,39 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
     ThMBcu = 0.063*cm; //from atlas db and MySqlEMB.cxx
     //ThMBG10 = m_parameters->GetValue("LArEMBG10Thickness");
     ThMBG10 = 0.367*cm; //from atlas db and MySqlEMB.cxx
-    G4double TotalthickMBe = ThMBcu+ThMBG10;
-    G4double TotalmassMBe = (ThMBcu*dcu+ThMBG10*dGten);
-    G4double FracMBCu = (ThMBcu*dcu)/TotalmassMBe;
-    G4double FracMBG10 = (ThMBG10*dGten)/TotalmassMBe;
-    density = TotalmassMBe/TotalthickMBe;
-    /*#ifdef DEBUG_GEO
-    std::cout<<"\n ---- Mother Board characteristics: ----" << std::endl;
-    std::cout<<"  Fraction Cu, G10: " << FracMBCu << "," << FracMBG10 << std::endl;
-    std::cout<<"  Total mass, Thickness:"
-         << TotalmassMBe <<" ," <<TotalthickMBe<< std::endl;
-    std::cout<<"  M_board Density =  "<<density/(CLHEP::g/CLHEP::cm3)<< "\n " << std::endl;
-    #endif*/
-    G4Material * Moth_elect = new G4Material(name="MBoards",density,ncomponents=2);
-    // GU use fractions from NOVA ??
-    //  Moth_elect->AddElement(elC,natoms=8);
-    //  Moth_elect->AddElement(elH,natoms=14);
-    //  Moth_elect->AddElement(elO,natoms=4);
-    //  Moth_elect->AddElement(elCu,natoms=1); 
-    Moth_elect->AddMaterial(Gten,fractionmass=FracMBG10);
-    Moth_elect->AddElement(elCu,fractionmass= FracMBCu);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Mother board  X0/Lambda = " << Moth_elect->GetRadlen() 
-            << " " << Moth_elect->GetNuclearInterLength() << std::endl;
-    #endif*/
+    if( !matMgr->IsDefined("MBoards") ){
+        G4double TotalthickMBe = ThMBcu+ThMBG10;
+        G4double TotalmassMBe = (ThMBcu*dcu+ThMBG10*dGten);
+        G4double FracMBCu = (ThMBcu*dcu)/TotalmassMBe;
+        G4double FracMBG10 = (ThMBG10*dGten)/TotalmassMBe;
+        density = TotalmassMBe/TotalthickMBe;
+        G4Material * Moth_elect = new G4Material("MBoards",density,2);
+        // GU use fractions from NOVA ??
+        //  Moth_elect->AddElement(elC,natoms=8);
+        //  Moth_elect->AddElement(elH,natoms=14);
+        //  Moth_elect->AddElement(elO,natoms=4);
+        //  Moth_elect->AddElement(elCu,natoms=1); 
+        Moth_elect->AddMaterial(Gten,fractionmass=FracMBG10);
+        Moth_elect->AddElement(elCu,fractionmass= FracMBCu);
+        matMgr->AddMaterial(Moth_elect);
+    }
+    G4Material * Moth_elect = matMgr->GetMaterial("MBoards");
 
     // GU 4/6/2004  material for the effective pin+summing board effect
-    G4double ThSBCu = 0.28*CLHEP::mm;
-    G4double ThSBAr = 9.72*CLHEP::mm;
-    G4double TotalthickSB = ThSBCu+ThSBAr;
-    G4double TotalmassSB = (ThSBCu*dcu+ThSBAr*dlar);
-    G4double FracSBCu = (ThSBCu*dcu)/TotalmassSB;
-    G4double FracSBAr = (ThSBAr*dlar)/TotalmassSB;
-    density = TotalmassSB/TotalthickSB;
-    /*#ifdef DEBUG_GEO
-    G4cout<<"\n ---- Pin+Summing Board characteristics: ----" << G4endl;
-    G4cout<<"  Fraction Cu, Ar: " << FracSBCu << "," << FracSBAr << G4endl;
-    G4cout<<"  Total mass, Thickness:"
-        << TotalmassSB <<" ," <<TotalthickSB<< G4endl;
-    G4cout<<"  Density =  "<<density/(g/cm3)<< "\n " << G4endl;
-    #endif*/
-    G4Material * Summing_board = new G4Material(name="SBoards",density,ncomponents=2);
-    Summing_board->AddElement(elAr,fractionmass=FracSBAr);
-    Summing_board->AddElement(elCu,fractionmass=FracSBCu);
-    /*#ifdef DEBUG_GEO
-    std::cout << " Summing board  X0/Lambda = " << Summing_board->GetRadlen()
-            << " " << Summing_board->GetNuclearInterLength() << std::endl;
-    #endif*/
+    if( !matMgr->IsDefined("SBoards") ){
+        G4double ThSBCu = 0.28*CLHEP::mm;
+        G4double ThSBAr = 9.72*CLHEP::mm;
+        G4double TotalthickSB = ThSBCu+ThSBAr;
+        G4double TotalmassSB = (ThSBCu*dcu+ThSBAr*dlar);
+        G4double FracSBCu = (ThSBCu*dcu)/TotalmassSB;
+        G4double FracSBAr = (ThSBAr*dlar)/TotalmassSB;
+        density = TotalmassSB/TotalthickSB;
+        G4Material * Summing_board = new G4Material("SBoards",density,2);
+        Summing_board->AddElement(elAr,fractionmass=FracSBAr);
+        Summing_board->AddElement(elCu,fractionmass=FracSBCu);
+        matMgr->AddMaterial(Summing_board);
+    }
+    G4Material * Summing_board = matMgr->GetMaterial("SBoards");
 
     // End of MATERIALS implementation. 
 
