@@ -188,7 +188,7 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
     // Define Material GTEN_epoxy  ( C8 H14 O4 )
     //density = m_parameters->GetValue("LArEMBEpoxyVolumicMass");
     if( !matMgr->IsDefined("Gten") ){
-        density = 1.8*g/cm; //from atlas fb and MySqlEMB.cxx
+        density = 1.8*g/cm3; //from atlas fb and MySqlEMB.cxx
         G4Material * Gten = new G4Material("Gten", density, 3);
         Gten->AddElement(elH,natoms=14); 
         Gten->AddElement(elO,natoms=4);
@@ -228,7 +228,7 @@ G4LogicalVolume* LArBarrelConstruction::GetEnvelope() {
         //double frmassCu = m_parameters->GetValue("LArEMBmasspercentCu");
         double frmassCu = 62; //from atlas db and MySqlEMB.cxx
         //double frmassKap = m_parameters->GetValue("LArEMBmasspercentKap");
-        double frmassKap = 39; //from atlas fb and MySqlEMB.cxx
+        double frmassKap = 38; //mass fractions must sum to 100%
         density = dcu*(1.+frmassKap/frmassCu)/(1.+frmassKap/frmassCu*dcu/dkapton);
         G4Material * Cable_elect = new G4Material("Cables",density,2);
         Cable_elect->AddElement(elCu, fractionmass=frmassCu*CLHEP::perCent);
