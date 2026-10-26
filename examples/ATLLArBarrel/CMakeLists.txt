@@ -7,6 +7,11 @@ endif()
 project(ATLLARBARREL)
 
 #----------------------------------------------------------------------------
+# Project CMake modules (FindEXPAT wrapper without version requirement)
+#
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+#----------------------------------------------------------------------------
 # Find Geant4 package, activating all available UI and Vis drivers by default
 # You can set WITH_GEANT4_UIVIS to OFF via the command line or ccmake/cmake-gui
 # to build a batch mode only executable
@@ -36,6 +41,16 @@ option(WITH_G4HepEmTracking "Build for G4HepEm usage with tracking" OFF)
 if(WITH_G4HepEmTracking)
     add_compile_definitions(USE_G4HepEmTracking)
     message("Project CMAKE option: building with USE_G4HepEm with tracking")
+endif()
+
+#----------------------------------------------------------------------------
+# Option to use G4GeneralParticleSource (/gps/ commands) instead of
+# G4ParticleGun (/gun/ commands) as primary generator
+#
+option(WITH_GPS "Build with G4GeneralParticleSource as primary generator" ON)
+if(WITH_GPS)
+    add_compile_definitions(USEGPS)
+    message("Project CMAKE option: building with USEGPS (G4GeneralParticleSource)")
 endif()
 
 #----------------------------------------------------------------------------

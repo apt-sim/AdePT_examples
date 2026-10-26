@@ -14,10 +14,8 @@
 #include "G4VUserPrimaryGeneratorAction.hh"
 #include "globals.hh"
 
-//macros
+//USEGPS is set via the CMake option WITH_GPS
 //
-#define USEGPS
-
 class G4ParticleGun;
 #ifdef USEGPS
 class G4GeneralParticleSource;
