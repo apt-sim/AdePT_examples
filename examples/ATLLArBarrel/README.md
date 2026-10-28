@@ -90,7 +90,7 @@ Parser options
 | `WITH_GEANT4_UIVIS` | `ON` | Build with Geant4 UI and Vis drivers (`OFF` for a batch mode only executable) |
 | `WITH_GPS` | `ON` | Use `G4GeneralParticleSource` as primary generator (`/gps/` macro commands). Set to `OFF` to use `G4ParticleGun` (`/gun/` macro commands) |
 | `WITH_G4HepEm` | `OFF` | Build with G4HepEm, see [G4HepEm integration](#g4hepem-integration) |
-| `WITH_G4HepEmTracking` | `OFF` | Use the G4HepEm specialized tracking, see [G4HepEm integration](#g4hepem-integration) |
+| `WITH_G4HepEmTracking` | `OFF` | Use the G4HepEm specialized tracking (`G4HepEmTrackingManager`); switched on automatically with recent G4HepEm versions, see [G4HepEm integration](#g4hepem-integration) |
 
 Note: the macros `run.mac` and `runcards/run.mac` use `/gun/` commands and need `-DWITH_GPS=OFF`; the other macros in `runcards/` (e.g. `runcards/run_gps.mac`) use `/gps/` commands and need the default `-DWITH_GPS=ON`. Using a macro with the wrong option stops the run with `COMMAND NOT FOUND`.
 ```sh
@@ -150,10 +150,20 @@ G4HepEm is an optional dependency to ATLLarBarrel. The following are istructions
    ./ATLLArBarrel -m run.mac -t 2 -p FTFP_BERT
    ```
    
-Note: the `-DWITH_G4HepEm=ON` will compile the files under `hepemlib/` that are needed to register the `G4HepEmProcess`. It is possible to use the `G4HepEmTrackingManager` instead of the `G4HepEmProcess` using the CMAKE option `-DWITH_G4HepEmTracking=ON`.
+Note: the `-DWITH_G4HepEm=ON` will compile the files under `hepemlib/` that are needed to register G4HepEm. Two modes are available:
+- `G4HepEmTrackingManager` (`-DWITH_G4HepEmTracking=ON`): G4HepEm takes over the tracking of e-, e+ and gamma.
+  ```sh
+  cmake -DGeant4_DIR=/path-to/geant4-11.1.0/geant4-11.1.0-install/lib/Geant4-11.1.0/ -DG4HepEm_DIR=/path-to/g4hepem-install/lib/cmake/G4HepEm/ -DWITH_G4HepEm=ON -DWITH_G4HepEmTracking=ON ../ATLLArBarrel/ 
+  ```
+- `G4HepEmProcess` (default with `-DWITH_G4HepEm=ON`): only available in older G4HepEm versions, as recent ones removed the `G4VProcess` implementation. When `G4HepEmProcess.hh` is not found in the G4HepEm installation, CMake prints a message and switches to the tracking mode automatically.
+
+Example with Geant4-11.4.3 and a recent G4HepEm (tracking mode only):
    ```sh
-   cmake -DGeant4_DIR=/path-to/geant4-11.1.0/geant4-11.1.0-install/lib/Geant4-11.1.0/ -DG4HepEm_DIR=/path-to/g4hepem-install/lib/cmake/G4HepEm/ -DWITH_G4HepEm=ON -DWITH_G4HepEmTracking=ON ../ATLLArBarrel/ 
+   source /path-to/geant4-v11.4.3-install/bin/geant4.sh
+   cmake -DGeant4_DIR=/path-to/geant4-v11.4.3-install/lib64/cmake/Geant4/ -DG4HepEm_DIR=/path-to/g4hepem-install/lib64/cmake/G4HepEm/ -DWITH_G4HepEm=ON ../ATLLArBarrel/
+   make
    ```
+   At runtime the output shows `--> Using G4HepEm with specialized tracking`.
 
 <!--Using VecGeom-->
 ## Using VecGeom

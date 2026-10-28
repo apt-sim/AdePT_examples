@@ -10,7 +10,9 @@
 //Includers from hepemlib files
 //
 #include "PhysicsList.hh"
+#ifdef G4HepEm_HAS_PROCESS
 #include "PhysListHepEm.hh"
+#endif
 #include "PhysListHepEmTracking.hh"
 
 //Includers from Geant4
@@ -29,7 +31,9 @@ PhysicsList::PhysicsList(const G4String& G4HepEmType)
 
     if (fG4HepEmType=="G4HepEmTracking") RegisterPhysics( new PhysListHepEmTracking );
 
+    #ifdef G4HepEm_HAS_PROCESS
     else if (fG4HepEmType=="G4HepEm") RegisterPhysics( new PhysListHepEm );
+    #endif
 
     else {
     

@@ -27,17 +27,30 @@ endif()
 # Option to enable G4HepEm usage
 #
 option(WITH_G4HepEm "Build for G4HepEm usage" OFF)
-if(WITH_G4HepEm)
-    find_package(G4HepEm REQUIRED)
-    add_compile_definitions(USE_G4HepEm)
-    message("Project CMAKE option: building with USE_G4HepEm")
-    add_subdirectory(hepemlib)
-endif()
 
 #----------------------------------------------------------------------------
 # Option to enable G4HepEm specialized trasnportation usage
 #
 option(WITH_G4HepEmTracking "Build for G4HepEm usage with tracking" OFF)
+
+if(WITH_G4HepEm)
+    find_package(G4HepEm REQUIRED)
+    add_compile_definitions(USE_G4HepEm)
+    message("Project CMAKE option: building with USE_G4HepEm")
+    # Recent G4HepEm versions removed G4HepEmProcess and only provide
+    # the G4HepEmTrackingManager: switch to tracking if needed
+    if(EXISTS ${G4HepEm_INCLUDE_DIR}/G4HepEmProcess.hh)
+        set(G4HepEm_HAS_PROCESS ON)
+    else()
+        set(G4HepEm_HAS_PROCESS OFF)
+        if(NOT WITH_G4HepEmTracking)
+            message("Project CMAKE option: G4HepEmProcess not available in this G4HepEm, switching to WITH_G4HepEmTracking")
+            set(WITH_G4HepEmTracking ON)
+        endif()
+    endif()
+    add_subdirectory(hepemlib)
+endif()
+
 if(WITH_G4HepEmTracking)
     add_compile_definitions(USE_G4HepEmTracking)
     message("Project CMAKE option: building with USE_G4HepEm with tracking")
