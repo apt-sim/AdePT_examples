@@ -30,6 +30,10 @@
 #include "PhysicsList.hh" //it is built as a separate library in hepem
 #endif
 
+#ifdef USE_ADEPT
+#include <AdePT/g4integration/G4EmStandardPhysics_AdePT.hh>
+#endif
+
 //Output helpers
 //
 namespace CLIOutputs {
@@ -107,6 +111,10 @@ int main(int argc,char** argv) {
     G4cout<<"--> Using Geant4 reference physics list"<<G4endl;
     auto physListFactory = new G4PhysListFactory();
     auto physicsList = physListFactory->GetReferencePhysList( custom_pl );
+    #ifdef USE_ADEPT //transport e-, e+ and gamma on GPU with AdePT
+    G4cout<<"--> Using AdePT for e-, e+ and gamma"<<G4endl;
+    physicsList->ReplacePhysics( new G4EmStandardPhysics_AdePT() );
+    #endif
     runManager->SetUserInitialization(physicsList);
     #endif
 

@@ -91,6 +91,9 @@ Parser options
 | `WITH_GPS` | `ON` | Use `G4GeneralParticleSource` as primary generator (`/gps/` macro commands). Set to `OFF` to use `G4ParticleGun` (`/gun/` macro commands) |
 | `WITH_G4HepEm` | `OFF` | Build with G4HepEm, see [G4HepEm integration](#g4hepem-integration) |
 | `WITH_G4HepEmTracking` | `OFF` | Use the G4HepEm specialized tracking (`G4HepEmTrackingManager`); switched on automatically with recent G4HepEm versions, see [G4HepEm integration](#g4hepem-integration) |
+| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with [AdePT](https://github.com/apt-sim/AdePT) (requires CUDA, AdePT, VecGeom and G4HepEm built with CUDA; not compatible with `WITH_G4HepEm`) |
+
+See [BUILD_OPTIONS.md](BUILD_OPTIONS.md) for a detailed description of all options, their combinations, build examples and how to run with AdePT. Performance and validation results for the CPU, G4HepEm and AdePT configurations are in [Results.md](Results.md).
 
 Note: the macros `run.mac` and `runcards/run.mac` use `/gun/` commands and need `-DWITH_GPS=OFF`; the other macros in `runcards/` (e.g. `runcards/run_gps.mac`) use `/gps/` commands and need the default `-DWITH_GPS=ON`. Using a macro with the wrong option stops the run with `COMMAND NOT FOUND`.
 ```sh

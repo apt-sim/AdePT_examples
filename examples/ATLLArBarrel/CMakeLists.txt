@@ -57,6 +57,25 @@ if(WITH_G4HepEmTracking)
 endif()
 
 #----------------------------------------------------------------------------
+# Option to enable AdePT (GPU transport of e-, e+ and gamma)
+# The EM physics of the reference physics list is replaced by
+# G4EmStandardPhysics_AdePT, which already includes G4HepEm
+#
+option(WITH_ADEPT "Build with AdePT GPU transport of e-, e+ and gamma" OFF)
+if(WITH_ADEPT)
+    if(WITH_G4HepEm)
+        message(FATAL_ERROR "WITH_ADEPT and WITH_G4HepEm cannot be used together: AdePT already uses G4HepEm")
+    endif()
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES native)
+    endif()
+    enable_language(CUDA)
+    find_package(AdePT REQUIRED)
+    add_compile_definitions(USE_ADEPT)
+    message("Project CMAKE option: building with USE_ADEPT (CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES})")
+endif()
+
+#----------------------------------------------------------------------------
 # Option to use G4GeneralParticleSource (/gps/ commands) instead of
 # G4ParticleGun (/gun/ commands) as primary generator
 #
@@ -87,6 +106,9 @@ file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh)
 add_executable(ATLLArBarrel ATLLArBarrel.cc ${sources} ${headers})
 if(WITH_G4HepEm)
     target_link_libraries(ATLLArBarrel ${Geant4_LIBRARIES} ${G4HepEm_LIBRARIES} hepemlib)
+elseif(WITH_ADEPT)
+    # cuda_rdc_* (from VecGeom) keeps the CUDA device linking consistent with AdePT
+    cuda_rdc_target_link_libraries(ATLLArBarrel ${Geant4_LIBRARIES} ${AdePT_LIBRARIES})
 else()
     target_link_libraries(ATLLArBarrel ${Geant4_LIBRARIES} ${G4HepEm_LIBRARIES})
 endif()
