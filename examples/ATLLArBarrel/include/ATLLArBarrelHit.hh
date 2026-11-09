@@ -35,6 +35,7 @@ class ATLLArBarrelHit : public G4VHit {
         //Methods to handle data
         //
         void AddEdep( G4double dEdep );
+        void AddEdepNoBirks( G4double dEdep );
         void SetEta( G4double Eta );
         void SetPhi( G4double Phi );
         void SetPositionAllocated( G4bool PosAllocated );
@@ -42,11 +43,14 @@ class ATLLArBarrelHit : public G4VHit {
         //Get methods
         //
         G4double GetEdep() const {return fEdep;};
+        G4double GetEdepNoBirks() const {return fEdepNoBirks;};
         G4bool HasPositionBeenAllocated() const {return fPositionAllocated;};
 
     private:
-        //Total energy deposition in the cell
+        //Total energy deposition in the cell (Birks-corrected)
         G4double fEdep;
+        //Total energy deposition in the cell without Birks correction
+        G4double fEdepNoBirks;
         
         //Eta and Phi cell values
         G4double fHitEta, fHitPhi;
@@ -59,6 +63,8 @@ class ATLLArBarrelHit : public G4VHit {
 using ATLLArBarrelHitsCollection = G4THitsCollection<ATLLArBarrelHit>;
 
 inline void ATLLArBarrelHit::AddEdep(G4double dEdep) { fEdep += dEdep; }
+
+inline void ATLLArBarrelHit::AddEdepNoBirks(G4double dEdep) { fEdepNoBirks += dEdep; }
 
 inline void ATLLArBarrelHit::SetPositionAllocated(G4bool PosAllocated) { fPositionAllocated = PosAllocated; }
 

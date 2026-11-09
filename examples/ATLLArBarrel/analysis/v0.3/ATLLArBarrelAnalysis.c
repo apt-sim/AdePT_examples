@@ -54,7 +54,7 @@ void ATLLArBarrelAnalysis(){
         if(seed<0.03){
             MiddleMax=MiddleMax-1*MiddleEtasPerRow;
         }
-        if(0.03<seed<0.06){
+        if(seed>=0.03 && seed<0.06){
             MiddleMax=MiddleMax-1;
         }
         //std::cout<<MiddleMax<<std::endl;
@@ -130,7 +130,7 @@ void ATLLArBarrelAnalysis(){
     RPhiH1->GetYaxis()->SetTitle("Entries");
     RPhiH1->Write();
     //REtaH1->ResetStats();
-    std::cout<<"Reta mean: "<<REtaH1->GetMean()<<"+-"<<RPhiH1->GetMean(11)<<" std: "<<REtaH1->GetStdDev()<<"+-"<<RPhiH1->GetStdDev(11)<<std::endl;
+    std::cout<<"Reta mean: "<<REtaH1->GetMean()<<"+-"<<REtaH1->GetMean(11)<<" std: "<<REtaH1->GetStdDev()<<"+-"<<REtaH1->GetStdDev(11)<<std::endl;
     REtaH1->GetXaxis()->SetTitle("Reta");
     REtaH1->GetYaxis()->SetTitle("Entries");
     REtaH1->Write();

@@ -79,7 +79,7 @@ endif()
 # Option to use G4GeneralParticleSource (/gps/ commands) instead of
 # G4ParticleGun (/gun/ commands) as primary generator
 #
-option(WITH_GPS "Build with G4GeneralParticleSource as primary generator" ON)
+option(WITH_GPS "Build with G4GeneralParticleSource as primary generator" OFF)
 if(WITH_GPS)
     add_compile_definitions(USEGPS)
     message("Project CMAKE option: building with USEGPS (G4GeneralParticleSource)")

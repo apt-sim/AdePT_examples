@@ -1,7 +1,6 @@
 # ATLLArBarrel
 A Geant4 simulation of the ATLAS LAr Barrel beam test setup.<br />
 <br />
-![example workflow](https://github.com/lopezzot/ATLTileCalTB/actions/workflows/geant4-test.yml/badge.svg)
 
 <figure>
 <img src="./images/ATLLArBarrel_img1.png" alt="Trulli" style="width:100%">
@@ -54,7 +53,7 @@ Ask authors for access to datasets.
 
 | ATLLArBarrel     | Reproduce data | Reproduce analysis | Comments     |
 | -------------    | ----------     | -----------        | -----------  |
-| v0.3 <br /> Dataset #1 <br /> tag 0.3_1 | Geant4-11.1 <br /> ALLArBarrel v0.3 <br /> ./ATLLArBarrel -m runcards/run_gps.mac -pl FTFP_BERT -t 8 | root -l v0.3/ATLLArBarrelAnalysis.c | Preliminary esults for gamma and pi-, assuming run_gps_output/ is alongside root macro. Created on 15/05/2023. |
+| v0.3 <br /> Dataset #1 <br /> tag 0.3_1 | Geant4-11.1 <br /> ALLArBarrel v0.3 <br /> built with -DWITH_GPS=ON <br /> ./ATLLArBarrel -m runcards/run_gps.mac -p FTFP_BERT -t 8 | root -l v0.3/ATLLArBarrelAnalysis.c | Preliminary esults for gamma and pi-, assuming run_gps_output/ is alongside root macro. Created on 15/05/2023. |
 
 <!--How to-->
 ## How to
@@ -71,12 +70,12 @@ Ask authors for access to datasets.
 3.  cmake build directory and make (using geant4.11.1)
     ```sh
     mkdir build; cd build/
-    cmake -DGeant4_DIR=/absolute_path_to/geant4.11.1-install/lib/Geant4-11.1.0/ relative_path_to/ATLLarBarrel/
+    cmake -DGeant4_DIR=/absolute_path_to/geant4.11.1-install/lib/Geant4-11.1.0/ relative_path_to/ATLLArBarrel/
     make
     ```
-4.  execute (example with run.mac macro card, 2 threads and FTFP_BERT physics list; run.mac requires `-DWITH_GPS=OFF`, see [CMake options](#cmake-options))
+4.  execute (example with run.mac macro card, 2 threads and FTFP_BERT physics list)
     ```sh
-    ./ATLLarBarrel -m run.mac -t 2 -p FTFP_BERT
+    ./ATLLArBarrel -m run.mac -t 2 -p FTFP_BERT
     ```
 
 Parser options
@@ -88,16 +87,16 @@ Parser options
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `WITH_GEANT4_UIVIS` | `ON` | Build with Geant4 UI and Vis drivers (`OFF` for a batch mode only executable) |
-| `WITH_GPS` | `ON` | Use `G4GeneralParticleSource` as primary generator (`/gps/` macro commands). Set to `OFF` to use `G4ParticleGun` (`/gun/` macro commands) |
+| `WITH_GPS` | `OFF` | Use `G4GeneralParticleSource` as primary generator (`/gps/` macro commands). By default `G4ParticleGun` is used (`/gun/` macro commands) |
 | `WITH_G4HepEm` | `OFF` | Build with G4HepEm, see [G4HepEm integration](#g4hepem-integration) |
 | `WITH_G4HepEmTracking` | `OFF` | Use the G4HepEm specialized tracking (`G4HepEmTrackingManager`); switched on automatically with recent G4HepEm versions, see [G4HepEm integration](#g4hepem-integration) |
 | `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with [AdePT](https://github.com/apt-sim/AdePT) (requires CUDA, AdePT, VecGeom and G4HepEm built with CUDA; not compatible with `WITH_G4HepEm`) |
 
 See [BUILD_OPTIONS.md](BUILD_OPTIONS.md) for a detailed description of all options, their combinations, build examples and how to run with AdePT. Performance and validation results for the CPU, G4HepEm and AdePT configurations are in [Results.md](Results.md).
 
-Note: the macros `run.mac` and `runcards/run.mac` use `/gun/` commands and need `-DWITH_GPS=OFF`; the other macros in `runcards/` (e.g. `runcards/run_gps.mac`) use `/gps/` commands and need the default `-DWITH_GPS=ON`. Using a macro with the wrong option stops the run with `COMMAND NOT FOUND`.
+Note: `runcards/run_gps.mac` uses `/gps/` commands and needs `-DWITH_GPS=ON`; all the other macros use `/gun/` commands and work with the default `-DWITH_GPS=OFF`. Using a macro with the wrong option stops the run with `COMMAND NOT FOUND`.
 ```sh
-cmake -DGeant4_DIR=/absolute_path_to/geant4-install/lib64/cmake/Geant4/ -DWITH_GPS=OFF relative_path_to/ATLLArBarrel/
+cmake -DGeant4_DIR=/absolute_path_to/geant4-install/lib64/cmake/Geant4/ -DWITH_GPS=ON relative_path_to/ATLLArBarrel/
 ```
 
 Note: the `cmake/` directory contains a `FindEXPAT.cmake` wrapper that drops the expat version requirement recorded by Geant4. It allows building against a Geant4 installation configured with a non-system expat (e.g. from Linuxbrew) while linking the system expat. When building Geant4 yourself, `-DGEANT4_USE_SYSTEM_EXPAT=OFF` avoids the issue altogether.
@@ -114,9 +113,9 @@ Note: the `cmake/` directory contains a `FindEXPAT.cmake` wrapper that drops the
    source /cvmfs/geant4.cern.ch/geant4/11.1/x86_64-centos7-gcc8-optdeb-MT/CMake-setup.sh
    export CXX=`which g++`
    export CC=`which gcc`
-   cmake3 -DGeant4_DIR= /cvmfs/geant4.cern.ch/geant4/11.1/x86_64-centos7-gcc8-optdeb-MT/lib64/Geant4-11.1.0/ ../ATLLArBarrel/
+   cmake3 -DGeant4_DIR=/cvmfs/geant4.cern.ch/geant4/11.1/x86_64-centos7-gcc8-optdeb-MT/lib64/Geant4-11.1.0/ ../ATLLArBarrel/
    ```
-3. execute (example with TBrun.mac macro card, 2 threads and FTFP_BERT physics list)
+3. execute (example with run.mac macro card, 2 threads and FTFP_BERT physics list)
    ```sh
    ./ATLLArBarrel -m run.mac -t 2 -p FTFP_BERT
    ```
@@ -137,7 +136,7 @@ Note: the `cmake/` directory contains a `FindEXPAT.cmake` wrapper that drops the
 ## G4HepEm integration
 
 [G4HepEm](https://github.com/mnovak42/g4hepem) is a project from the Geant4 Collaboration targeting a library for speeding up the electromagnetic shower generation.
-G4HepEm is an optional dependency to ATLLarBarrel. The following are istructions for its usage:
+G4HepEm is an optional dependency to ATLLArBarrel. The following are istructions for its usage:
 1. Install G4HepEm as described in the [documentation](https://github.com/mnovak42/g4hepem#quick-start)
 2. source geant4 env (example with Geant4-11.1)
    ```sh
@@ -192,7 +191,7 @@ Example with Geant4-11.4.3 and a recent G4HepEm (tracking mode only):
    git clone https://github.com/lopezzot/ATLLArBarrel.git
    source /path_to/installg4vecgeom/bin/geant4.sh
    mkdir build; cd build/
-   cmake -DGeant4_DIR=/absolute-path_to/installg4vecgeom/lib/Geant4-11.1.0/ -DVecGeom_DIR=/abolute-path-to/VecGeom-v1.2.1/install/lib/cmake/VecGeom /relative_path_to/ATLLarBarrel/
+   cmake -DGeant4_DIR=/absolute-path_to/installg4vecgeom/lib/Geant4-11.1.0/ -DVecGeom_DIR=/abolute-path-to/VecGeom-v1.2.1/install/lib/cmake/VecGeom /relative_path_to/ATLLArBarrel/
    make
    ```
 Note: the instructions above build VecGeom in backend scalar mode. To build it in backend vector use this [script](scripts/vecgeom_backendvc_install.sh), then specify `-DVc_DIR` when building the simulation.

@@ -8,7 +8,7 @@ require at build time and at run time.
 | Option | Default | Effect | Requires |
 | ------ | ------- | ------ | -------- |
 | `WITH_GEANT4_UIVIS` | `ON` | Build with the Geant4 UI and visualization drivers (`ui_all vis_all`). Set to `OFF` for a batch-only executable. | Geant4 with UI/Vis drivers |
-| `WITH_GPS` | `ON` | Primary generator: `G4GeneralParticleSource` (`/gps/` macro commands). With `OFF`: `G4ParticleGun` (`/gun/` macro commands). | – |
+| `WITH_GPS` | `OFF` | Primary generator: `G4ParticleGun` (`/gun/` macro commands). With `ON`: `G4GeneralParticleSource` (`/gps/` macro commands). | – |
 | `WITH_G4HepEm` | `OFF` | Use the physics list in `hepemlib/`: G4HepEm for e-, e+ and gamma only, no hadronic physics. | G4HepEm (`G4HepEm_DIR`) |
 | `WITH_G4HepEmTracking` | `OFF` | With `WITH_G4HepEm`: use `G4HepEmTrackingManager` instead of `G4HepEmProcess`. Switched on automatically when the G4HepEm installation has no `G4HepEmProcess.hh` (recent G4HepEm versions). | `WITH_G4HepEm=ON` |
 | `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with AdePT. The EM physics of the reference physics list (`-p`, default `FTFP_BERT`) is replaced by `G4EmStandardPhysics_AdePT`; hadronic physics stays on the CPU. | CUDA, AdePT, VecGeom and VecCore with CUDA, G4HepEm with CUDA |
@@ -28,8 +28,8 @@ require at build time and at run time.
 
 | Macro | Commands | Needs |
 | ----- | -------- | ----- |
-| `run.mac`, `runcards/run.mac` | `/gun/` | `-DWITH_GPS=OFF` |
-| `runcards/run_gps.mac` and the other `runcards/` macros | `/gps/` | `-DWITH_GPS=ON` (default) |
+| `runcards/run_gps.mac` | `/gps/` | `-DWITH_GPS=ON` |
+| all the other macros with a primary generator | `/gun/` | `-DWITH_GPS=OFF` (default) |
 
 A macro used with the wrong option stops the run with `COMMAND NOT FOUND`.
 

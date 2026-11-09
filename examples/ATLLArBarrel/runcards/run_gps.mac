@@ -8,8 +8,8 @@
 /gps/ang/type iso #isotropic angular distribution
 /gps/ang/minphi 3.14 rad
 /gps/ang/maxphi 3.19 rad
-/gps/ang/mintheta 104.177 deg #0.2 eta
-/gps/ang/maxtheta 105.415 deg #0.25 eta
+/gps/ang/mintheta 104.177 deg #0.25 eta
+/gps/ang/maxtheta 105.415 deg #0.272 eta
 /run/beamOn 10000
 
 /gps/particle pi-

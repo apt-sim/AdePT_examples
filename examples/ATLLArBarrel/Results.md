@@ -23,6 +23,8 @@ All runs use Release builds with `-DWITH_GPS=OFF` and the macros in `runcards/be
 Times are the event-loop times printed by Geant4 at the end of the run (initialisation excluded).
 `EnergyLAr` is the total energy per event in the LAr sensitive detector (Birks-corrected,
 including electronic noise), in MeV. Errors on means are standard errors of the mean.
+The ntuple now also has `EnergyLArNoNoise` (Birks-corrected, no noise) and `EnergyLArNoBirks`
+(no Birks correction, no noise). They were added after the measurements below and are not used in them.
 
 ## How to reproduce
 
@@ -169,8 +171,9 @@ were taken after these fixes:
 
 ## Caveats
 
-- `HadInteraction` is always 0 because of a bug in `ATLLArBarrelTrackingAction`: the condition
-  `type != "baryon" || type != "meson"` is always true. It cannot be used to show that hadronic
+- In the runs above `HadInteraction` is always 0 because of a bug in `ATLLArBarrelTrackingAction`,
+  fixed after these measurements: the condition `type != "baryon" || type != "meson"` was always
+  true. These runs cannot be used to show that hadronic
   interactions are negligible. For the e-/gamma beams used here they are expected to be small,
   but this is not demonstrated.
 - Repetitions use the same random seed, so the timing errors reflect machine noise only, not
