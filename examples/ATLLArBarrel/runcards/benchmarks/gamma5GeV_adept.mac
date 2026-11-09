@@ -5,6 +5,7 @@
 /adept/setMillionsOfHitSlots 1
 /adept/setCUDAStackLimit 8192
 /adept/setTrackInAllRegions true
+/adept/SetEnergyLossFluctuation true
 /run/initialize
 /run/printProgress 100
 /run/setCut 0.01 mm

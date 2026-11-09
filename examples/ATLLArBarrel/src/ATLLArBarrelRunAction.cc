@@ -49,6 +49,7 @@ ATLLArBarrelRunAction::ATLLArBarrelRunAction(ATLLArBarrelEventAction* evtAction)
     analysisManager->CreateNtupleDColumn("BackHitsEdep",  fEventAction->GetBackHitsEdepVector());
     analysisManager->CreateNtupleDColumn("EnergyLArNoNoise"); //Birks-corrected, no electronic noise
     analysisManager->CreateNtupleDColumn("EnergyLArNoBirks"); //no Birks correction, no electronic noise
+    analysisManager->CreateNtupleIColumn("EventID");          //merged rows are not in event order
     analysisManager->FinishNtuple();
 }
 

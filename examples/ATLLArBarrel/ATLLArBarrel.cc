@@ -142,12 +142,17 @@ int main(int argc,char** argv) {
     //
     auto UImanager = G4UImanager::GetUIpointer();
 
+    G4int exitCode = 0;
     if ( !ui ) {
         // execute an argument macro file if exist (second parser argument)
         G4String command = "/control/execute ";
         UImanager->ApplyCommand("/process/em/verbose 0"); //avoid printing em processes
         UImanager->ApplyCommand("/process/had/verbose 0");//avoid printing had processes
-        UImanager->ApplyCommand(command+macro);
+        const G4int macroStatus = UImanager->ApplyCommand(command+macro);
+        if ( macroStatus != 0 ) { //report a failed macro through the exit code
+            G4cerr << "Macro " << macro << " failed with status " << macroStatus << G4endl;
+            exitCode = 1;
+        }
     }
     else {
         UImanager->ApplyCommand("/control/execute init_vis.mac");
@@ -167,6 +172,7 @@ int main(int argc,char** argv) {
     delete visManager;
     delete runManager;
 
+    return exitCode;
 }
 
 //**************************************************
