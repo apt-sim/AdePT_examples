@@ -33,12 +33,14 @@ void ATLLArBarrelTrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
     //or the track is not a primary track
     //
     //if(0!=aTrack->GetParentID())return;
-    if(0!=aTrack->GetParentID() || aTrack->GetParticleDefinition()->GetParticleType()!="baryon"
-       || aTrack->GetParticleDefinition()->GetParticleType()!="meson") return;
+    const G4String& ParticleType = aTrack->GetParticleDefinition()->GetParticleType();
+    if(0!=aTrack->GetParentID() || (ParticleType!="baryon" && ParticleType!="meson")) return;
 
     //Check it the primary baryon/meson had a nuclear breakupi (hadron inelastic process)
+    //The process can be null if the track did not perform a regular step
     //
-    if(aTrack->GetStep()->GetPostStepPoint()->GetProcessDefinedStep()->GetProcessSubType()==121) {//HadInElastic process
+    const G4VProcess* Process = aTrack->GetStep()->GetPostStepPoint()->GetProcessDefinedStep();
+    if(Process && Process->GetProcessSubType()==121) {//HadInElastic process
             //the table of processes subtypes can be printed out with
             // /run/particle/dumpOrderingParam
             //Also useful

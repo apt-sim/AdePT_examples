@@ -53,6 +53,13 @@ class ATLLArBarrelSensDet : public G4VSensitiveDetector {
         ATLLArBarrelHitsCollection* fMiddleHitsCollection;
         ATLLArBarrelHitsCollection* fBackHitsCollection;
 
+        //Hits collections IDs, retrieved at the first event.
+        //They are members (not statics) as each worker thread has its own SD
+        //
+        G4int fFrontHCID;
+        G4int fMiddleHCID;
+        G4int fBackHCID;
+
         //Method to check if the HitID calculated in the ProcessHits method
         //is not outside the boundaries of hits per section
         //
@@ -110,7 +117,7 @@ inline void ATLLArBarrelSensDet::CheckHitID(const ATLLArBarrelTBConstants::STACS
 
     switch(Section){
         case ATLLArBarrelTBConstants::STACSection::Front:
-            if(HitID > ATLLArBarrelTBConstants::FrontHitNo){
+            if(HitID >= ATLLArBarrelTBConstants::FrontHitNo){
                 G4ExceptionDescription msg;
                 msg << "Wrong HitID "<<HitID<<" for section " << Section;
                 G4Exception("CalorimeterSD::CheckHitID()",
@@ -118,7 +125,7 @@ inline void ATLLArBarrelSensDet::CheckHitID(const ATLLArBarrelTBConstants::STACS
             }
             break;
         case ATLLArBarrelTBConstants::STACSection::Middle:
-            if(HitID > ATLLArBarrelTBConstants::MiddleHitNo){
+            if(HitID >= ATLLArBarrelTBConstants::MiddleHitNo){
                 G4ExceptionDescription msg;
                 msg << "Wrong HitID "<<HitID<<" for section " << Section;
                 G4Exception("CalorimeterSD::CheckHitID()",
@@ -126,7 +133,7 @@ inline void ATLLArBarrelSensDet::CheckHitID(const ATLLArBarrelTBConstants::STACS
             }
             break;
         case ATLLArBarrelTBConstants::STACSection::Back:
-            if(HitID > ATLLArBarrelTBConstants::BackHitNo){
+            if(HitID >= ATLLArBarrelTBConstants::BackHitNo){
                 G4ExceptionDescription msg;
                 msg << "Wrong HitID "<<HitID<<" for section " << Section;
                 G4Exception("CalorimeterSD::CheckHitID()",

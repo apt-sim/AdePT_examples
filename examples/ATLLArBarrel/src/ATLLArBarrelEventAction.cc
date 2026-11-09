@@ -98,7 +98,17 @@ void ATLLArBarrelEventAction::EndOfEventAction(const G4Event* event){
     for (std::size_t n = 0; n < ATLLArBarrelTBConstants::FrontHitNo; ++n)  fFrontHitsEdepVector[n] = (*FrontHC)[n]->GetEdep();
     for (std::size_t n = 0; n < ATLLArBarrelTBConstants::MiddleHitNo; ++n) fMiddleHitsEdepVector[n]= (*MiddleHC)[n]->GetEdep();
     for (std::size_t n = 0; n < ATLLArBarrelTBConstants::BackHitNo; ++n)   fBackHitsEdepVector[n]  = (*BackHC)[n]->GetEdep();
-    
+
+    //Total energy before adding the noise: Birks-corrected and without Birks correction
+    //
+    const G4double EnergyNoNoise = std::accumulate(fFrontHitsEdepVector.begin(),fFrontHitsEdepVector.end(),0.)+
+                                   std::accumulate(fMiddleHitsEdepVector.begin(),fMiddleHitsEdepVector.end(),0.)+
+                                   std::accumulate(fBackHitsEdepVector.begin(),fBackHitsEdepVector.end(),0.);
+    G4double EnergyNoBirks = 0.;
+    for (std::size_t n = 0; n < ATLLArBarrelTBConstants::FrontHitNo; ++n)  EnergyNoBirks += (*FrontHC)[n]->GetEdepNoBirks();
+    for (std::size_t n = 0; n < ATLLArBarrelTBConstants::MiddleHitNo; ++n) EnergyNoBirks += (*MiddleHC)[n]->GetEdepNoBirks();
+    for (std::size_t n = 0; n < ATLLArBarrelTBConstants::BackHitNo; ++n)   EnergyNoBirks += (*BackHC)[n]->GetEdepNoBirks();
+
     //Add electronic noise: gaussian with sigma 20 MeV equivalent
     //
     #ifndef NONOISE
@@ -118,6 +128,9 @@ void ATLLArBarrelEventAction::EndOfEventAction(const G4Event* event){
                                        std::accumulate(fFrontHitsEdepVector.begin(),fFrontHitsEdepVector.end(),0.)+
                                        std::accumulate(fMiddleHitsEdepVector.begin(),fMiddleHitsEdepVector.end(),0.)+
                                        std::accumulate(fBackHitsEdepVector.begin(),fBackHitsEdepVector.end(),0.));
+    //Columns 2, 3 and 4 are the hits vectors, filled automatically by AddNtupleRow()
+    AnalysisManager->FillNtupleDColumn(5, EnergyNoNoise);
+    AnalysisManager->FillNtupleDColumn(6, EnergyNoBirks);
     AnalysisManager->AddNtupleRow(); //this automatically allocated entried with vectors in root file
 
     //Printout event hits information for debugging

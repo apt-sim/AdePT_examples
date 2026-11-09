@@ -31,7 +31,10 @@ ATLLArBarrelSensDet::ATLLArBarrelSensDet(const G4String& name)
     : G4VSensitiveDetector(name),
     fFrontHitsCollection(nullptr),
     fMiddleHitsCollection(nullptr),
-    fBackHitsCollection(nullptr){
+    fBackHitsCollection(nullptr),
+    fFrontHCID(-1),
+    fMiddleHCID(-1),
+    fBackHCID(-1){
 
     //Insert in vector of collection names the 3 collections' names
     collectionName.insert(fFrontHitsCollectionName);
@@ -60,15 +63,14 @@ void ATLLArBarrelSensDet::Initialize(G4HCofThisEvent* HCE){
     //It can be accessed via the SDManager anytime for both storing and retrieving the hits collection.
     //If the hitcollection name is unambigous, it is enough to retrieve the ID (no need for SD name).
     //
-    static G4int FrontHCID = -1, MiddleHCID = -1, BackHCID = -1;
-    if(FrontHCID<0){ //prevent doing it every event -> HCIDs are identical for every event
-        FrontHCID  = G4SDManager::GetSDMpointer()->GetCollectionID(fFrontHitsCollectionName); 
-        MiddleHCID = G4SDManager::GetSDMpointer()->GetCollectionID(fMiddleHitsCollectionName); 
-        BackHCID   = G4SDManager::GetSDMpointer()->GetCollectionID(fBackHitsCollectionName); 
+    if(fFrontHCID<0){ //prevent doing it every event -> HCIDs are identical for every event
+        fFrontHCID  = G4SDManager::GetSDMpointer()->GetCollectionID(fFrontHitsCollectionName);
+        fMiddleHCID = G4SDManager::GetSDMpointer()->GetCollectionID(fMiddleHitsCollectionName);
+        fBackHCID   = G4SDManager::GetSDMpointer()->GetCollectionID(fBackHitsCollectionName);
     }
-    HCE->AddHitsCollection( FrontHCID, fFrontHitsCollection ); 
-    HCE->AddHitsCollection( MiddleHCID, fMiddleHitsCollection ); 
-    HCE->AddHitsCollection( BackHCID, fBackHitsCollection ); 
+    HCE->AddHitsCollection( fFrontHCID, fFrontHitsCollection );
+    HCE->AddHitsCollection( fMiddleHCID, fMiddleHitsCollection );
+    HCE->AddHitsCollection( fBackHCID, fBackHitsCollection );
 
     //Allocate fixed number of hits
     //
@@ -114,6 +116,7 @@ G4bool ATLLArBarrelSensDet::ProcessHits(G4Step* aStep, G4TouchableHistory* th){
     //i.e. the DeltaPhi does not contain entirely the accordion tips
     //
     if(Phi>ATLLArBarrelTBConstants::halfSTACDeltaPhi || Phi<(-ATLLArBarrelTBConstants::halfSTACDeltaPhi)) return false; 
+    const G4double EdepNoBirks = Edep;
     Edep = ApplyBirks(Edep, aStep->GetStepLength()/10.);
  
     //Calculate depth of hit inside STAC
@@ -151,7 +154,7 @@ G4bool ATLLArBarrelSensDet::ProcessHits(G4Step* aStep, G4TouchableHistory* th){
     //Calculate hit index in collection
     //
     G4int HitID = PhiIdx*EtasPerRow + EtaIdx;
-    CheckHitID(Section, HitID); //throws fatal exception if >MaxHitNo 
+    CheckHitID(Section, HitID); //throws fatal exception if >=MaxHitNo
 
     //Get hit according to section and HitID
     //
@@ -182,6 +185,7 @@ G4bool ATLLArBarrelSensDet::ProcessHits(G4Step* aStep, G4TouchableHistory* th){
     //Add edep to hit
     //
     hit->AddEdep(Edep);
+    hit->AddEdepNoBirks(EdepNoBirks);
     if(!hit->HasPositionBeenAllocated()){
         hit->SetEta(EtaIdx * DeltaEta + DeltaEta/2.);
         hit->SetPhi(PhiIdx * DeltaPhi + DeltaPhi/2.);

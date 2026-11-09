@@ -16,6 +16,7 @@
 ATLLArBarrelHit::ATLLArBarrelHit()
     : G4VHit(),
     fEdep(0.),
+    fEdepNoBirks(0.),
     fHitEta(0.),
     fHitPhi(0.),
     fPositionAllocated(false){}   
