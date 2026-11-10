@@ -32,9 +32,12 @@ void ATLLArBarrelTrackingAction::PostUserTrackingAction(const G4Track* aTrack) {
     //Skip it if the primary particle is not a baryon or meson
     //or the track is not a primary track
     //
-    //if(0!=aTrack->GetParentID())return;
+    //Do not use GetParentID()==0 to identify primaries: with AdePT, unless the track data are
+    //kept on the host, secondaries of nuclear reactions on GPU steps have ParentID 0 as well
+    //(see Results.md, section 3d). Only real primaries have a G4PrimaryParticle attached.
+    //
     const G4String& ParticleType = aTrack->GetParticleDefinition()->GetParticleType();
-    if(0!=aTrack->GetParentID() || (ParticleType!="baryon" && ParticleType!="meson")) return;
+    if(!aTrack->GetDynamicParticle()->GetPrimaryParticle() || (ParticleType!="baryon" && ParticleType!="meson")) return;
 
     //Check it the primary baryon/meson had a nuclear breakupi (hadron inelastic process)
     //The process can be null if the track did not perform a regular step

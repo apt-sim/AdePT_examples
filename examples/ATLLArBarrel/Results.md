@@ -25,7 +25,7 @@ Times are the event-loop times printed by Geant4 at the end of the run (initiali
 including electronic noise), in MeV. Errors on means are standard errors of the mean.
 The ntuple now also has `EnergyLArNoNoise` (Birks-corrected, no noise), `EnergyLArNoBirks`
 (no Birks correction, no noise) and `EventID`. They were added after the measurements below and are
-not used in them.
+used only in the runs with fluctuations on of sections 3a and 3b, and in the noise-free tables there.
 
 ## How to reproduce
 
@@ -92,49 +92,190 @@ about 264 MB, below its 512 MB threshold).
   to the CPU and processed by the unchanged ATLLArBarrel sensitive detector.
 - **CPU**: the default build, FTFP_BERT.
 
-**The physics settings are not matched.** These measurements used the AdePT default of energy-loss
-fluctuations off, while FTFP_BERT on the CPU has them on, so neither the energies nor the speed-up
-compare the same physics. The `*_adept.mac` macros now set `/adept/SetEnergyLossFluctuation true`,
-so running them no longer reproduces the AdePT numbers of this section.
+**Energy-loss fluctuations.** AdePT switches them off by default, while FTFP_BERT on the CPU has them
+on. The `*_adept.mac` macros now set `/adept/SetEnergyLossFluctuation true`, which is confirmed by the
+G4HepEm configuration printed at initialisation. Below, "AdePT (fl. off)" are the earlier measurements,
+which do not compare the same physics as the CPU, and "AdePT (fl. on)" are the matched ones. The runs
+with fluctuations on, the noise-free values and the CPU re-runs of 2026-11-10 use the current code. A
+re-run with fluctuations off on the current code reproduces the earlier EnergyLAr means exactly.
+
+**Order of `/run/setCut` (important).** The `*_adept.mac` macros originally called `/run/setCut 0.01 mm` after
+`/run/initialize`. With AdePT this order does not give the requested production cut on the GPU
+(section 3c), so the rows labelled "fl. off" and "fl. on" below are not valid physics comparisons. Rows
+labelled "cut before init" have `/run/setCut` before `/run/initialize`, as the macros do now, and they
+are the reference AdePT results. The CPU runs are not affected.
 
 ### 3a. 5 GeV gamma, 300 events, 1 thread
 
 | Setup | Time per event | CPU time / wall time | EnergyLAr mean (MeV) |
 |---|---|---|---|
 | CPU FTFP_BERT | 136.7 ± 0.2 ms (section 1a) | ~100 % | 977.2 ± 10.1 (rms 175) |
-| AdePT | 142 ± 3 ms (3 runs) | ~26 % | 979.7 ± 9.9 (rms 171) |
+| AdePT (fl. off) | 142 ± 3 ms (3 runs) | ~26 % | 979.7 ± 9.9 (rms 171) |
+| AdePT (fl. on) | 159.7 ± 0.4 ms (3 runs) | ~25 % | 969.5 ± 10.4 (rms 180) |
+| **AdePT (fl. on, cut before init)** | 232.0 ± 1.9 ms (3 runs) | ~24 % | 960.5 ± 10.3 (rms 179) |
 
-There is no gain. With a single CPU thread and one 5 GeV shower at a time the GPU is underused,
+There is no gain: with the production cut applied, AdePT is **1.7x slower** than the CPU here. With a single CPU thread and one 5 GeV shower at a time the GPU is underused,
 and the CPU thread waits for it about 75 % of the time. A later CPU re-run gave 141.8 ms per event,
 so run-to-run variation on this machine is about 4 %. The mean energies agree within the
-statistical precision of this sample (±1.4 %).
+statistical precision of this sample (±1.4 %). The electronic noise dominates this error. Without it:
+
+| EnergyLArNoNoise (MeV) | Mean | rms | Min |
+|---|---|---|---|
+| CPU FTFP_BERT | 970.7 ± 2.9 | 50.6 | 701.2 |
+| AdePT (fl. off) | 981.8 ± 2.8 | 48.3 | 854.5 |
+| AdePT (fl. on) | 986.7 ± 3.0 | 52.1 | 618.1 |
+| **AdePT (fl. on, cut before init)** | 973.4 ± 2.6 | 45.2 | 834.5 |
+
+With the cut before init, AdePT agrees with the CPU at 5 GeV: **+2.7 ± 3.9 MeV (+0.3 %, 0.7 sigma)**.
+With the cut after init the difference was +16.0 ± 4.2 MeV (+1.6 %, 3.8 sigma) with fluctuations on and
++11.1 ± 4.0 MeV (+1.1 %, 2.8 sigma) with fluctuations off.
 
 ### 3b. 50 GeV electrons, 150 events, 8 threads, 2 repetitions
 
 | Setup | Wall time | Throughput (time per event) |
 |---|---|---|
 | CPU FTFP_BERT | 28.99 s, 28.46 s | 191.5 ± 2.5 ms |
-| AdePT | 12.87 s, 12.19 s | 83.5 ± 3.2 ms |
+| AdePT (fl. off) | 12.87 s, 12.19 s | 83.5 ± 3.2 ms |
+| CPU FTFP_BERT, re-run on the current code | 28.53 s, 28.54 s | 190.2 ms |
+| AdePT (fl. on), 3 repetitions | 13.90 s, 13.64 s, 13.69 s | 91.6 ± 0.9 ms |
+| **AdePT (fl. on, cut before init), 3 repetitions** | 20.31 s, 20.45 s, 20.37 s | 135.9 ± 0.5 ms |
 
-AdePT is **2.3x faster** in throughput. An earlier run with 160 events gave 183 ms (CPU) and
-81 ms (AdePT), the same ratio.
+With the matched physics and the production cut applied, AdePT is **1.4x faster** in throughput. The
+2.1x (fluctuations on) and 2.3x (fluctuations off) speed-ups were measured with the cut after init, so they
+do not compare the same physics. An earlier run with 160 events and fluctuations off gave 183 ms (CPU)
+and 81 ms (AdePT).
+
+![Time per event for the CPU and AdePT](images/results/fig6_time_per_event.png)
 
 | EnergyLAr (MeV) | Mean | Median | rms | Min |
 |---|---|---|---|---|
 | CPU FTFP_BERT | 9912.7 ± 15.7 | 9925.2 | 192 | 9308.5 |
-| AdePT | 9990.4 ± 35.6 | 10028.7 | 436 | 5386.7 |
-| AdePT, without the event below 8 GeV | 10021.3 ± 17.9 | – | 219 | – |
+| AdePT (fl. off) | 9990.4 ± 35.6 | 10028.7 | 436 | 5386.7 |
+| AdePT (fl. off), without the event below 8 GeV | 10021.3 ± 17.9 | – | 219 | – |
+| AdePT (fl. on) | 10017.0 ± 40.1 | 10063.8 | 491 | 4555.0 |
+| AdePT (fl. on), without the event below 8 GeV | 10053.6 ± 16.3 | – | 198 | – |
+| **AdePT (fl. on, cut before init)** | 9899.0 ± 19.0 | – | 232 | 8374.2 |
 
-**Open issue: the AdePT physics is not validated yet.** Two effects reproduce exactly in every run:
-1. One event deposits only 5387 MeV, about half the typical energy. No CPU event is below 9300 MeV.
-2. Without that event, AdePT deposits **+109 ± 24 MeV (+1.1 %, 4.6 sigma)** more than the CPU,
-   with a similar width.
+| EnergyLArNoNoise (MeV) | Mean | Median | rms | Min |
+|---|---|---|---|---|
+| CPU FTFP_BERT | 9913.8 ± 9.9 | 9932.1 | 121 | 9437.7 |
+| AdePT (fl. off) | 10016.3 ± 31.5 | 10052.0 | 385 | 5672.4 |
+| AdePT (fl. off), without the event below 8 GeV | 10045.4 ± 11.9 | – | 146 | – |
+| AdePT (fl. on) | 10021.1 ± 38.1 | 10064.2 | 467 | 4622.2 |
+| AdePT (fl. on), without the event below 8 GeV | 10057.4 ± 11.8 | – | 145 | – |
+| **AdePT (fl. on, cut before init)** | 9920.7 ± 13.2 | – | 161 | 8472.5 |
 
-No warning about full buffers or dropped steps is printed. The 5 GeV comparison (3a) is not
-precise enough to exclude a 1 % shift, so the effect is not shown to depend on the number of
-threads or on the energy. For comparison, G4HepEm alone differs from FTFP_BERT by only
-+0.3 % ± 0.2 % (section 1b). The AdePT timings should not be used for physics conclusions
-until this is understood.
+With the cut before init the 50 GeV mean agrees with the CPU within the statistics of this sample
+(+6.9 ± 16.5 MeV without noise).
+
+![EnergyLArNoNoise for 1000 electrons of 50 GeV, CPU and AdePT](images/results/fig1_energy_50GeV.png)
+
+**Events at about half the typical energy are physics.** With the cut after init, event 1 deposits
+4622 MeV without noise (fluctuations on) and event 145 deposits 5672 MeV (fluctuations off). A diagnostic
+build that returned all GPU steps and summed the energy per event showed:
+
+- Every event below 8 GeV (events 1 and 372 with fluctuations on, event 145 with fluctuations off) contains
+  a photonuclear interaction of a 29-35 GeV photon. The hadrons deposit little in the LAr, and 9-18 GeV of
+  non-electromagnetic particles leave the world.
+- The energy budget closes: deposits plus escaping energy average 49879 MeV with AdePT (cut before init)
+  and 49881 MeV on the CPU, with 1000 events each.
+- With 1000 electrons and the cut before init, no event is below 8 GeV. The lowest one deposits 8473 MeV
+  and contains a 29.5 GeV photonuclear interaction. The CPU has none below 8 GeV, and its lowest event
+  (8734 MeV) contains a 19.2 GeV photonuclear interaction.
+- With 4000 photons of 30 GeV each, the tail is the same: photonuclear interactions above 25 GeV occur 5
+  times with AdePT (cut before init) and 3 times on the CPU, with energies of 0.24-0.75 and 0.22-0.59 of the
+  typical value. Events below 70 % of the typical value number 3 and 4, all with a photonuclear interaction
+  above 10 GeV. The statistics of these events is small.
+
+![LAr energy against the photon energy at the hardest photonuclear interaction, 30 GeV photons](images/results/fig4_photonuclear.png)
+
+### 3c. Origin of the AdePT excess: order of `/run/setCut`
+
+With `/run/setCut` after `/run/initialize`, AdePT deposited about 1.4 % more energy in the LAr than the CPU.
+Moving the command before `/run/initialize` removes this excess. The comparison below uses a diagnostic
+build, 1000 electrons of 50 GeV, 8 threads and fluctuations on. The "G4HepEm on CPU" setups replace only the
+EM constructor of FTFP_BERT, so they use the G4HepEm physics with the Geant4 navigation. "AdePT settings"
+disables the multiple MSC steps per transportation step, as AdePT does on the GPU. The values exclude events
+with a photonuclear interaction above 1 GeV or more than 500 MeV of escaping non-EM energy.
+
+| Setup | EnergyLArNoNoise (MeV) | Before Birks (MeV) | After/before Birks | Steps per event | e± steps in LAr | e± path in LAr (mm) | e± path in absorber (mm) |
+|---|---|---|---|---|---|---|---|
+| CPU FTFP_BERT | 9917.1 ± 4.0 | 9978.6 ± 4.0 | 0.9938 | 817985 | 163205 | 52131 | 31621 |
+| G4HepEm on CPU, default | 9907.6 ± 3.8 | 9966.5 ± 3.8 | 0.9941 | 637319 | 104966 | 52117 | 31432 |
+| G4HepEm on CPU, AdePT settings | 9935.2 ± 4.0 | 9996.5 ± 4.0 | 0.9939 | 788647 | 161753 | 52216 | 31403 |
+| AdePT, cut after init | 10062.0 ± 4.1 | 10078.6 ± 4.1 | 0.9984 | 597269 | 82462 | 51041 | 29336 |
+| **AdePT, cut before init** | 9931.7 ± 3.9 | 9992.8 ± 3.9 | 0.9939 | 791958 | 162949 | 52192 | 31418 |
+
+![LAr energy relative to the CPU for each setup](images/results/fig2_excess_by_config.png)
+
+- With the cut before init, AdePT is **+0.15 % ± 0.06 %** above the CPU, the same as G4HepEm on CPU with the same
+  settings (+0.18 % ± 0.06 %). What remains is therefore the difference between the G4HepEm and FTFP_BERT physics,
+  not a GPU effect. With the cut after init the difference was +1.46 % ± 0.06 %. Steps per event, Birks ratio and path
+  lengths now also match G4HepEm on CPU.
+- With the cut after init, the GPU produces 44 thousand electron tracks per event instead of 117 thousand. Only
+  electrons below about 1 MeV are missing, while positrons and higher-energy electrons are unchanged. This is the
+  behaviour expected from a higher production threshold.
+- A run with no `/run/setCut` at all gives a mean of 10035 MeV without noise for 150 electrons, close to the 10021 MeV
+  of the cut after init but not bit-identical. This is consistent with the GPU tables keeping the default cut, but the
+  exact mechanism inside AdePT has not been identified.
+- The total deposit in the detector is the same in all cases (about 49790 MeV), so energy was shared differently
+  between absorber and LAr rather than lost.
+- Reducing the MSC safety factor from 0.6 to 0.1 did not change the gap, so the GPU safety estimate was not the cause.
+
+![Initial energy spectrum of electron tracks; G4HepEm and AdePT with the cut before init coincide](images/results/fig5_electron_spectrum.png)
+
+![Energy in the LAr by step length](images/results/fig3_step_length.png)
+
+The macros `runcards/benchmarks/*_adept.mac` now set the cut before `/run/initialize`, so they reproduce the
+cut-before-init rows. With the cut before init AdePT agrees with the CPU to better than 0.2 %, but it has only been
+compared on these benchmarks (5 GeV gamma, 30 GeV gamma and 50 GeV electrons).
+
+### 3d. Sensitive detector and step transfer from GPU to CPU
+
+AdePT copies the GPU steps back to the CPU and calls the unchanged Geant4 sensitive detector, under two
+conditions in its documentation: user code must not cache per-track state in shared members, and it must
+not kill tracks.
+
+**The ATLLArBarrel sensitive detector meets these conditions.** It is created per worker in
+`ConstructSDandField` and attached to `LAr::EMB::STAC`. `ProcessHits` keeps no per-track state and uses only
+the pre-step position, the total energy deposit and the step length, which are all copied from the GPU.
+AdePT drains the returned steps before the end of the event. Checks on the copied steps, with the cut before init:
+
+| Check | Result |
+|---|---|
+| 300 events of 50 GeV electrons, about 95 million sensitive-detector calls | every step in the sensitive volume reaches it |
+| Energy per event, sensitive detector against a sum over the same steps | identical in all events |
+| Distance between pre- and post-step point larger than the step length | 0 steps |
+| Electron energy deposit larger than its kinetic energy | 0 steps |
+| 5 GeV gamma, default mode against all steps returned, events without a nuclear reaction | 89 of 89 agree within the print precision |
+
+In events with a nuclear reaction the two modes differ by up to 17 MeV at 5 GeV and 26 MeV at 50 GeV, with a mean
+of -0.06 and -0.13 MeV. These reactions use CPU random numbers, whose sequence depends on the order of the
+returned steps, but this explanation has not been isolated. All 50 GeV events contain at least one reaction.
+
+**AdePT limitation: nuclear secondaries have ParentID 0 by default.** Unless the host keeps the track data
+(`/adept/returnFirstAndLastStep true`, `/adept/returnAllSteps true`), GPU tracks are reconstructed on the CPU with
+the dummy track ID 0. Hadrons created by a photonuclear or electronuclear reaction on a GPU step then get
+**ParentID 0, the same value as a real primary**, and Geant4 user code cannot tell them apart from primaries by
+ParentID. Their tracking on the CPU is otherwise normal, so energies and hits are not affected. The dummy track ID
+appears in a comment of the AdePT code, but the AdePT user documentation does not mention this effect.
+
+`HadInteraction` selected primaries with `GetParentID()==0`, so it was wrongly set with AdePT. The tracking action
+now identifies primaries by their attached `G4PrimaryParticle`, which does not depend on the track IDs:
+
+| Sample | Setup | Events with `HadInteraction` = 1 |
+|---|---|---|
+| 50 GeV e-, 150 events | CPU FTFP_BERT | 0 |
+| | AdePT, default, previous code | 135 |
+| | AdePT, `/adept/returnFirstAndLastStep true`, previous code | 0 |
+| | AdePT, default, fixed code | 0 |
+| 5 GeV gamma, 300 events | AdePT, default, fixed code | 0 |
+| 20 GeV pi-, 300 events | CPU FTFP_BERT, fixed code | 253 |
+| | AdePT, default, fixed code | 253 |
+
+The pion sample confirms that the flag still works for real primaries. Its mean energy without noise is
+1412.5 ± 61.8 MeV with AdePT and 1371.5 ± 61.9 MeV on the CPU, compatible with each other (0.5 sigma) with a large
+error. Returning the first and last steps took 20.5 s against 20.4 s for 150 electrons (one run).
 
 ## 4. Geometry overlap checks
 
@@ -182,8 +323,9 @@ were taken after these fixes:
   true. These runs cannot be used to show that hadronic
   interactions are negligible. For the e-/gamma beams used here they are expected to be small,
   but this is not demonstrated. Even after the fix the flag only records inelastic interactions of
-  a primary baryon or meson: it stays 0 by construction for e-/gamma beams and does not detect
-  photonuclear or electronuclear interactions.
+  a primary baryon or meson. It stays 0 for e-/gamma beams and does not detect photonuclear or electronuclear
+  interactions. Before the fix of section 3d it was wrongly set with AdePT in most events, so the
+  `HadInteraction` values of AdePT runs taken before that fix must not be used.
 - Repetitions use the same random seed, so the timing errors reflect machine noise only, not
   event-to-event variation.
 - The G4HepEm comparisons involve an EM-only physics list and a different MSC range factor (0.04),
