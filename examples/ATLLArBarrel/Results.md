@@ -23,8 +23,9 @@ All runs use Release builds with `-DWITH_GPS=OFF` and the macros in `runcards/be
 Times are the event-loop times printed by Geant4 at the end of the run (initialisation excluded).
 `EnergyLAr` is the total energy per event in the LAr sensitive detector (Birks-corrected,
 including electronic noise), in MeV. Errors on means are standard errors of the mean.
-The ntuple now also has `EnergyLArNoNoise` (Birks-corrected, no noise) and `EnergyLArNoBirks`
-(no Birks correction, no noise). They were added after the measurements below and are not used in them.
+The ntuple now also has `EnergyLArNoNoise` (Birks-corrected, no noise), `EnergyLArNoBirks`
+(no Birks correction, no noise) and `EventID`. They were added after the measurements below and are
+not used in them.
 
 ## How to reproduce
 
@@ -90,6 +91,11 @@ about 264 MB, below its 512 MB threshold).
   transported on the GPU in all regions (1 M track slots, 1 M hit slots). GPU steps are returned
   to the CPU and processed by the unchanged ATLLArBarrel sensitive detector.
 - **CPU**: the default build, FTFP_BERT.
+
+**The physics settings are not matched.** These measurements used the AdePT default of energy-loss
+fluctuations off, while FTFP_BERT on the CPU has them on, so neither the energies nor the speed-up
+compare the same physics. The `*_adept.mac` macros now set `/adept/SetEnergyLossFluctuation true`,
+so running them no longer reproduces the AdePT numbers of this section.
 
 ### 3a. 5 GeV gamma, 300 events, 1 thread
 
@@ -175,9 +181,12 @@ were taken after these fixes:
   fixed after these measurements: the condition `type != "baryon" || type != "meson"` was always
   true. These runs cannot be used to show that hadronic
   interactions are negligible. For the e-/gamma beams used here they are expected to be small,
-  but this is not demonstrated.
+  but this is not demonstrated. Even after the fix the flag only records inelastic interactions of
+  a primary baryon or meson: it stays 0 by construction for e-/gamma beams and does not detect
+  photonuclear or electronuclear interactions.
 - Repetitions use the same random seed, so the timing errors reflect machine noise only, not
   event-to-event variation.
-- The G4HepEm comparisons involve an EM-only physics list and a different MSC range factor (0.04).
+- The G4HepEm comparisons involve an EM-only physics list and a different MSC range factor (0.04),
+  so they are not a matched control for the AdePT comparison of section 3.
 - The GPU is a consumer card with low FP64 throughput (AdePT computes in double precision), and it
   also drives the desktop display. GPU results are not representative of data-centre GPUs.

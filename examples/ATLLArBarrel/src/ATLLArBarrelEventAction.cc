@@ -131,6 +131,7 @@ void ATLLArBarrelEventAction::EndOfEventAction(const G4Event* event){
     //Columns 2, 3 and 4 are the hits vectors, filled automatically by AddNtupleRow()
     AnalysisManager->FillNtupleDColumn(5, EnergyNoNoise);
     AnalysisManager->FillNtupleDColumn(6, EnergyNoBirks);
+    AnalysisManager->FillNtupleIColumn(7, event->GetEventID());
     AnalysisManager->AddNtupleRow(); //this automatically allocated entried with vectors in root file
 
     //Printout event hits information for debugging

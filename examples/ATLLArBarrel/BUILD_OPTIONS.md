@@ -81,6 +81,7 @@ to the GPU. Example, based on `run.mac`:
 /adept/setMillionsOfHitSlots 1
 /adept/setCUDAStackLimit 8192
 /adept/setTrackInAllRegions true
+/adept/SetEnergyLossFluctuation true
 /run/initialize
 /run/setCut 0.01 mm
 /gun/particle e-
@@ -99,7 +100,9 @@ Notes:
   and/or high-energy showers: with 1 thread and 5 GeV gammas there is no gain over the CPU.
 - AdePT does not support killing GPU tracks from CPU user code, or per-track state cached in
   shared members of user actions/sensitive detectors (see the AdePT documentation).
-- Validation status: not validated yet. With 50 GeV electrons, AdePT deposits about 1 % more
+- AdePT switches energy-loss fluctuations off by default, while the Geant4 physics lists have them
+  on. Set `/adept/SetEnergyLossFluctuation true` before `/run/initialize` to compare the same physics.
+- Validation status: not validated yet. With 50 GeV electrons and fluctuations off, AdePT deposits about 1 % more
   energy in the LAr than the CPU, and one event in 150 deposits only half the energy. See
   [Results.md](Results.md), section 3b.
 - Benchmark macros with the AdePT settings are in `runcards/benchmarks/` (`*_adept.mac`).
