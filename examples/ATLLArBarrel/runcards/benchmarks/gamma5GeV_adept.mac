@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2022-2026 Lorenzo Pezzotti and ATLLArBarrel contributors
+# SPDX-License-Identifier: MIT
+
+#Benchmark macro (see Results.md), requires -DWITH_GPS=OFF
+#AdePT settings (must precede /run/initialize), requires -DWITH_ADEPT=ON
+/adept/setVerbosity 0
+/adept/setMillionsOfTrackSlots 1
+/adept/setMillionsOfHitSlots 1
+/adept/setCUDAStackLimit 8192
+/adept/setTrackInAllRegions true
+/adept/SetEnergyLossFluctuation true
+#With AdePT the production cut must be set before /run/initialize (see Results.md, section 3c)
+/run/setCut 0.01 mm
+/run/initialize
+/run/printProgress 100
+/gun/particle gamma
+/gun/energy 5 GeV
+/gun/position 0. 0. 0. m
+#eta 0.2 phi 0.01225 (0.0245/2)
+/gun/direction 0.980254 0.0120087 0.197375
+/run/beamOn 300

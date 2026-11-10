@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2022-2026 Lorenzo Pezzotti and ATLLArBarrel contributors
+# SPDX-License-Identifier: MIT
+
+#Geometry overlap check (see Results.md): tolerance 10 um, 200 points per volume,
+#at most one report per volume
+/run/initialize
+/geometry/test/tolerance 0.01 mm
+/geometry/test/resolution 200
+/geometry/test/maximum_errors 1
+/geometry/test/run

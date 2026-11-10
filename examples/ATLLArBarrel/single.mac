@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2022-2026 Lorenzo Pezzotti and ATLLArBarrel contributors
+# SPDX-License-Identifier: MIT
+
+/run/initialize
+/run/printProgress 1
+/gun/particle gamma
+/gun/energy 5 GeV
+/gun/direction 1 0 0
+/gun/position 0 0 3.5 m
+/run/beamOn 1

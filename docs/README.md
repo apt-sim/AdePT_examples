@@ -61,6 +61,7 @@ applications.
 |--------|-------------|--------|
 | `simple_calorimeter` | Minimal calorimeter simulation using AdePT. | _planned_ |
 | `benchmark_app` | A performance benchmark for transport kernels. | _planned_ |
+| [`ATLLArBarrel`](../examples/ATLLArBarrel/README.md) | ATLAS LAr barrel beam test simulation with GPU transport of the EM showers and validation against Geant4. | _experimental_ |
 
 ---
 

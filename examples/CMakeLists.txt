@@ -20,3 +20,7 @@ cmake_minimum_required(VERSION 3.25)
 #   PRIVATE
 #     ${AdePT_LIBRARIES}
 # )
+
+# ATLAS LAr barrel beam test simulation with AdePT GPU transport
+set(WITH_ADEPT ON)
+add_subdirectory(ATLLArBarrel)

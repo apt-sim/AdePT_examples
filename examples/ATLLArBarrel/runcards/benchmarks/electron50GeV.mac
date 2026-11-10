@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2022-2026 Lorenzo Pezzotti and ATLLArBarrel contributors
+# SPDX-License-Identifier: MIT
+
+#Benchmark macro (see Results.md), requires -DWITH_GPS=OFF
+/run/initialize
+/run/printProgress 50
+/run/setCut 0.01 mm
+/gun/particle e-
+/gun/energy 50 GeV
+/gun/position 0. 0. 0. m
+#eta 0.2 phi 0.01225 (0.0245/2)
+/gun/direction 0.980254 0.0120087 0.197375
+/run/beamOn 150
