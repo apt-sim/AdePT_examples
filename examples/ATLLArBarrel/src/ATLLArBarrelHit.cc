@@ -1,28 +1,25 @@
 //**************************************************
 // \file ATLLArBarrelHit.cc
-// \brief: implementation of ATLLArBarrelHit 
+// \brief: implementation of ATLLArBarrelHit
 //         class
-// \author: Lorenzo Pezzotti (CERN EP-SFT-sim) 
+// \author: Lorenzo Pezzotti (CERN EP-SFT-sim)
 //          @lopezzot
 // \start date: 7 May 2022
 //**************************************************
 
-//Includers from project files
+// Includers from project files
 //
 #include "ATLLArBarrelHit.hh"
 
-//Constructor
+// Constructor
 //
 ATLLArBarrelHit::ATLLArBarrelHit()
-    : G4VHit(),
-    fEdep(0.),
-    fEdepNoBirks(0.),
-    fHitEta(0.),
-    fHitPhi(0.),
-    fPositionAllocated(false){}   
+    : G4VHit(), fEdep(0.), fEdepNoBirks(0.), fHitEta(0.), fHitPhi(0.), fPositionAllocated(false)
+{
+}
 
-//Destructor
+// Destructor
 //
-ATLLArBarrelHit::~ATLLArBarrelHit(){}
+ATLLArBarrelHit::~ATLLArBarrelHit() {}
 
 //**************************************************
