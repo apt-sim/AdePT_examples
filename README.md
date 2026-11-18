@@ -80,5 +80,6 @@ Also see the project’s [`CONTRIBUTING.md`](CONTRIBUTING.md) for coding style a
 
 - Code in this repository is licensed under Apache-2.0
 - Documentation is licensed under CC-BY-4.0
+- `examples/ATLLArBarrel/` keeps its original MIT license (see `.reuse/dep5`)
 
 See [`LICENSE`](LICENSE) and [`LICENSES/`](LICENSES/) for details.
