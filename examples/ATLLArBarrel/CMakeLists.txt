@@ -112,6 +112,19 @@ file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cc)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh)
 
 #----------------------------------------------------------------------------
+# Option to build the original geometry, kept in legacy/src, instead of the
+# one with the presampler cathode and thin-absorber overlap fixes
+#
+option(WITH_LEGACY_GEOMETRY "Build the original geometry (with the presampler and thin-absorber overlaps)" OFF)
+if(WITH_LEGACY_GEOMETRY)
+    list(FILTER sources EXCLUDE REGEX "/src/(LArBarrelConstruction|LArBarrelPresamplerConstruction)\\.cc$")
+    file(GLOB legacy_sources ${PROJECT_SOURCE_DIR}/legacy/src/*.cc)
+    list(APPEND sources ${legacy_sources})
+    include_directories(${PROJECT_SOURCE_DIR}/src) # PresParameterDef.icc
+    message("Project CMAKE option: building with the legacy geometry (legacy/src)")
+endif()
+
+#----------------------------------------------------------------------------
 # Add the executable, and link it to the Geant4 libraries
 #
 add_executable(ATLLArBarrel ATLLArBarrel.cc ${sources} ${headers})

@@ -91,6 +91,7 @@ Parser options
 | `WITH_G4HepEm` | `OFF` | Build with G4HepEm, see [G4HepEm integration](#g4hepem-integration) |
 | `WITH_G4HepEmTracking` | `OFF` | Use the G4HepEm specialized tracking (`G4HepEmTrackingManager`); switched on automatically with recent G4HepEm versions, see [G4HepEm integration](#g4hepem-integration) |
 | `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with [AdePT](https://github.com/apt-sim/AdePT) (requires CUDA, AdePT, VecGeom and G4HepEm built with CUDA; not compatible with `WITH_G4HepEm`) |
+| `WITH_LEGACY_GEOMETRY` | `OFF` | Build the original geometry kept in `legacy/src/` instead of the fixed one (the original has a 1.03 mm presampler cathode overlap and 6–30 µm thin-absorber overlaps, see [Review.md](Review.md) section 4) |
 
 See [BUILD_OPTIONS.md](BUILD_OPTIONS.md) for a detailed description of all options, their combinations, build examples and how to run with AdePT. Performance and validation results for the CPU, G4HepEm and AdePT configurations are in [Results.md](Results.md).
 
