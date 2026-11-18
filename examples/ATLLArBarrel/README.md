@@ -101,6 +101,16 @@ cmake -DGeant4_DIR=/absolute_path_to/geant4-install/lib64/cmake/Geant4/ -DWITH_G
 
 Note: the `cmake/` directory contains a `FindEXPAT.cmake` wrapper that drops the expat version requirement recorded by Geant4. It allows building against a Geant4 installation configured with a non-system expat (e.g. from Linuxbrew) while linking the system expat. When building Geant4 yourself, `-DGEANT4_USE_SYSTEM_EXPAT=OFF` avoids the issue altogether.
 
+### Build as part of AdePT_examples
+Inside the [AdePT_examples](https://github.com/apt-sim/AdePT_examples) repository ATLLArBarrel is added with `add_subdirectory` from `examples/CMakeLists.txt` and is always built with `WITH_ADEPT=ON` (`WITH_G4HepEm` and `WITH_G4HepEmTracking` are forced `OFF`). From the top of AdePT_examples:
+```sh
+cmake -S . -B build -DCMAKE_PREFIX_PATH="<adept_install>;<geant4_install>;<vecgeom_install>;<g4hepem_install>"
+cmake --build build -- -j
+cd build/examples/ATLLArBarrel
+./ATLLArBarrel -m <macro> -t <threads>
+```
+The other options (`WITH_GEANT4_UIVIS`, `WITH_GPS`) can be passed as usual. The standalone build described above is unchanged. See [AdePT_migration.md](AdePT_migration.md) for the AdePT macro commands and the validation steps.
+
 ### Build, compile and execute on lxplus
 1. git clone the repo
    ```sh
