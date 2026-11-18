@@ -1529,6 +1529,18 @@ G4LogicalVolume *LArBarrelConstruction::GetEnvelope()
       tl1 = tl1 - safety_zlen;
       bl1 = bl1 - safety_zlen;
 
+      // Where the straight is cut by the eta = Bar_Eta_cut line, the corners of the
+      // thin absorber (thickness Thce) cross the inner cone of STAC by up to 30 um.
+      // Shorten the absorber only (not the electrode) by 2*safety_zlen_abs at the
+      // high-z end; its low-z end and the thick absorber do not move.
+      const G4double safety_zlen_abs = 0.100 * CLHEP::mm;
+      G4double tl1a                  = tl1;
+      G4double bl1a                  = bl1;
+      if (Zcp2l[irl] < Zmax || Zcp2h[irl] < Zmax) {
+        tl1a = tl1 - safety_zlen_abs;
+        bl1a = bl1 - safety_zlen_abs;
+      }
+
 #ifdef DEBUG_GEO
       if (icopy == 0) {
         std::cout << " " << std::endl;
@@ -1538,11 +1550,11 @@ G4LogicalVolume *LArBarrelConstruction::GetEnvelope()
       }
 #endif
 #ifndef ORIGINAL_ATLAS
-      if (tl1 == bl1) {
-        Straight_solid = new G4Box(straightName, tl1, h1, Dz);
+      if (tl1a == bl1a) {
+        Straight_solid = new G4Box(straightName, tl1a, h1, Dz);
       } else
 #endif
-        Straight_solid = new G4Trap(straightName, 2 * Dz, 2 * h1, 2 * tl1, 2 * bl1);
+        Straight_solid = new G4Trap(straightName, 2 * Dz, 2 * h1, 2 * tl1a, 2 * bl1a);
 
       // The same for electrodes.
       if (A_SAGGING) h1 = de / 2. - .007 * CLHEP::mm;
@@ -1577,7 +1589,7 @@ G4LogicalVolume *LArBarrelConstruction::GetEnvelope()
       // They are put into the previous thin absorbers for
       //          abs(eta) < .8  i.e. abs(Z)< Zcut2
 
-      Zx0 = (tl1 + bl1) / 2.;
+      Zx0 = (tl1a + bl1a) / 2.;
       //        Xb1 = (Zcp1[irl]-Zmin)/2.;
       //        Xt1 = (Zcp1[irl+1]-Zmin)/2.;
       // more correct computation with z lenght computed exactly at the
@@ -1671,7 +1683,7 @@ G4LogicalVolume *LArBarrelConstruction::GetEnvelope()
         Xcd = fx(irl + .5, Gama, Cenx, Ceny);
         Ycd = fy(irl + .5, Gama, Cenx, Ceny);
       }
-      Zcd = Zmin + (tl1 + bl1) / 2. + safety_zlen;
+      Zcd = Zmin + (tl1a + bl1a) / 2. + safety_zlen;
 
 #ifdef DEBUG_GEO
       if (icopy == 0) {

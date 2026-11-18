@@ -570,11 +570,13 @@ No code change is required: G4VG converts the Geant4 geometry to VecGeom at `/ru
 presampler and the cryostat use solids supported by VecGeom, and the conversion was validated on the GPU
 (`Results.md` section 3).
 
-Recommended before production runs on the GPU (`Review.md` section 4) ⚠️:
+Fixed (`Review.md` section 4.6) ✅. The original geometry is kept in `legacy/src` (`-DWITH_LEGACY_GEOMETRY=ON`):
 
-- **Presampler `catho3`** overlaps its mother by 1.03 mm. Clip the first cathode with a `G4IntersectionSolid`.
-- **Five `ThinAbs::Straight` sections** protrude 6–30 µm from `STAC` at its z ends. Apply to them the same
-  `safety_zlen` (50 µm) margin used for the other accordion pieces.
+- **Presampler `catho3`** overlapped its mother by 1.03 mm. The first cathode of the tilted module is now
+  clipped with a `G4IntersectionSolid`. Check that G4VG converts this boolean solid when AdePT builds the
+  VecGeom geometry.
+- **Five `ThinAbs::Straight` sections** protruded 6–30 µm from `STAC` at the η = 1.475 cut. The thin
+  absorber is now 0.2 mm shorter at that end.
 
 VecGeom navigation is more sensitive to overlaps than Geant4. An overlap can produce stuck tracks or lost energy
 only on the GPU. After the fixes, repeat the validation of step 8: the energy should not change.
@@ -763,7 +765,7 @@ Ordered by impact, all observed in this project:
 | `src/ATLLArBarrelTrackingAction.cc` | primaries via `GetPrimaryParticle()`, null-process check | ✅ |
 | `src/ATLLArBarrelSensDet.cc`, `include/ATLLArBarrelSensDet.hh` | per-thread HC IDs (no statics), index bounds | ✅ |
 | `src/ATLLArBarrelEventAction.cc`, `RunAction.cc`, `Hit.cc/.hh` | noise-free validation columns (optional) | ✅ |
-| `src/ATLLArBarrelConstruction.cc` (and helpers) | fix `catho3` and ThinAbs overlaps (recommended) | ⚠️ |
+| `src/ATLLArBarrelConstruction.cc` (and helpers) | fix `catho3` and ThinAbs overlaps | ✅ done (`src/LAr*Construction.cc`; original in `legacy/src`) |
 | `run_adept.mac` | new macro (step 6) | ⚠️ new |
 | `runcards/benchmarks/*_adept.mac` | AdePT benchmark macros, cut before init | ✅ |
 | other `runcards/*.mac` | `/adept/` block and cut before init, when used with AdePT | ⚠️ |

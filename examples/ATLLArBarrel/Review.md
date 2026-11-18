@@ -32,7 +32,8 @@ machine, both numbers are given.
   `catho3` protrudes by **1.03 mm** from its module. At higher sampling density (2000 and 20000 points
   per volume) the check also finds **6–30 µm protrusions of five `LAr::EMB::ThinAbs::Straight` volumes**
   from `LAr::EMB::STAC`, at the high-z end of the accordion. They were not visible with the
-  200 points used in `Results.md`. Both are explained, with proposed fixes, in section 4.
+  200 points used in `Results.md`. Both are explained in section 4. **Both are now fixed** (4.6); the
+  original geometry is kept in `legacy/src` and can be built with `-DWITH_LEGACY_GEOMETRY=ON`.
 - **Speed.** On a 6-core Intel i5-9600K, G4HepEm makes the simulation **1.40–1.51× faster** than
   Geant4 `FTFP_BERT`, for 5 GeV photons and 50 GeV electrons, with 1 and 6 threads. This agrees with
   the 1.44× of `Results.md` on a 24-core EL9 machine. Multithreaded scaling on 6 cores is about 5.2×
@@ -82,8 +83,8 @@ importance.
 | # | Severity | Where | Finding | Recommendation |
 |---|---|---|---|---|
 | 1 | **Medium** | `hepemlib/src/PhysicsList.cc`, `PhysListHepEmTracking.cc` | The G4HepEm configuration is an EM-only list: no hadronic physics, no photo/electro-nuclear processes, `SetDefaults()` + `MscRangeFactor 0.04`. It is therefore not a like-for-like comparison with `FTFP_BERT`, and it is not the physics that AdePT uses (`G4EmStandardPhysics_AdePT` keeps the nuclear processes of FTFP_BERT). Measured effect: +0.4 % LAr energy at 50 GeV (section 6.3), and no low-energy tail from photonuclear events. | Add the matched configuration of Appendix A (`-DWITH_G4HepEmEM=ON`: reference list from `-p`, EM constructor replaced by `G4EmStandardPhysics` + `G4HepEmTrackingManager`). Keep the EM-only list for EM-only studies and label it as such in README/Results. |
-| 2 | **Medium** | `src/LArBarrelPresamplerConstruction.cc:346, 411–416` | Known overlap: first `catho3` of the tilted module (`mod[1]`, −12°) protrudes 1.03 mm from `LAr::Barrel::Presampler::Module`. | See 4.2: the electrode pattern of this module does not fit in the module length, so a shift does not work; clip the first cathode. |
-| 3 | Low–Medium | `src/LArBarrelConstruction.cc` (thin-absorber straights, ~l.1129–1160, 1960–1993) | New: 5 `LAr::EMB::ThinAbs::Straight` copies protrude 6–30 µm from `LAr::EMB::STAC` at z ≈ 3112 mm (the end of STAC). | See 4.3: apply the same 50 µm `safety_zlen` used for other accordion pieces to the z half-length of the thin-absorber straights at the last fold. |
+| 2 | **Medium** | `src/LArBarrelPresamplerConstruction.cc:346, 411–416` | Known overlap: first `catho3` of the tilted module (`mod[1]`, −12°) protrudes 1.03 mm from `LAr::Barrel::Presampler::Module`. | See 4.2: the electrode pattern of this module does not fit in the module length, so a shift does not work; clip the first cathode. **Fixed** (4.6). |
+| 3 | Low–Medium | `src/LArBarrelConstruction.cc` (thin-absorber straights, ~l.1129–1160, 1960–1993) | New: 5 `LAr::EMB::ThinAbs::Straight` copies protrude 6–30 µm from `LAr::EMB::STAC` at z ≈ 3112 mm (the end of STAC). | See 4.3: apply the same 50 µm `safety_zlen` used for other accordion pieces to the z half-length of the thin-absorber straights at the last fold. **Fixed** with a larger margin at the η cut (4.3, 4.6). |
 | 4 | Low–Medium | `ATLLArBarrel.cc:112–116` | With `WITH_ADEPT`, `ReplacePhysics(new G4EmStandardPhysics_AdePT())` silently replaces the EM constructor of *any* list given with `-p`. For lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) the GPU then runs option-0 physics while the user believes otherwise. AdePT documents that `G4EmStandardPhysics_AdePT` is only for option 0 (its case 2). | Refuse or warn for lists whose name has an EM suffix; for those, AdePT recommends registering `AdePTTrackingManager` directly (its case 3). See 7.3. |
 | 5 | Low | `ATLLArBarrel.cc:69–83` | The command-line loop reads `argv[i+1]` without checking `i+1 < argc`: `./ATLLArBarrel -m` reads past the end of `argv` (undefined behaviour, crash). | Check `i+1 < argc` before reading the value and print the help otherwise. |
 | 6 | Low | `CMakeLists.txt:3` | `cmake_minimum_required(VERSION 3.8...3.18)`. `CMAKE_CUDA_ARCHITECTURES=native` (the project default for AdePT) needs CMake ≥ 3.24, and AdePT itself needs ≥ 3.25.2. Also, with CMake 4 the `...3.18` upper bound turns off all policies newer than 3.18. | Raise to `3.16...3.31` and, inside `if(WITH_ADEPT)`, add `cmake_minimum_required(VERSION 3.25.2)` (see 7.2). |
@@ -180,6 +181,11 @@ last fold, as for the other pieces. The volumes are outside the readout region (
 energy is not affected, but very small overlaps at a mother boundary are a typical source of stuck
 tracks on the GPU navigator.
 
+**Correction (see 4.6).** A closer look shows that the straights *do* subtract `safety_zlen`
+(`tl1`, `bl1` and the position `Zcd`). The protrusions are at the η = 1.475 cut, not at `Zmax`: the
+z lengths `Zcp2l`/`Zcp2h` are computed on the centre line of the absorber, and the corners of the 2.2 mm
+thick absorber cross the inner cone of `STAC` by up to 30 µm, more than the 50 µm z margin covers.
+
 ### 4.4 GDML file
 
 `GDMLs/experimentalHall_v0p1.gdml` is an older export (v0.1). `Results.md` shows that its GeoModel
@@ -192,6 +198,33 @@ would silently use different materials (the Gten and Cables fixes of October 202
 
 `MaterialManager` removes all duplicated materials, and the fixes of `Gten`, `SiO2`, `MBoards` and `Cables`
 described in `Results.md`, section 5, are correct. No further material problem was found.
+
+### 4.6 Fixes applied
+
+Both overlaps are fixed in `src/`. The original files are kept unchanged in `legacy/src/`;
+`-DWITH_LEGACY_GEOMETRY=ON` builds them instead of the fixed ones.
+
+- **`catho3`** (`src/LArBarrelPresamplerConstruction.cc`): option 1 of 4.2. In a tilted module
+  (`mod[i][3] != 0`, i.e. module 2) the first cathode is a `G4IntersectionSolid` of the tilted `G4Trd`
+  with the module envelope, shrunk by `epsil` (7 µm) along the stacking direction to avoid coincident
+  surfaces. The clipped cathode is placed at the module origin with the same name `catho3`.
+  The other 63 cathodes and all anodes are unchanged.
+- **Thin-absorber straights** (`src/LArBarrelConstruction.cc`): where the straight is cut by the
+  η = 1.475 line, the thin absorber (not the electrode) is shortened by 0.2 mm at its high-z end
+  (`safety_zlen_abs = 0.1 mm` subtracted from `tl1`/`bl1`). Its low-z end and the thick absorber
+  inside it do not move.
+
+Checks with Geant4 11.4.3 (tolerance 1 µm, `/geometry/test/run`):
+
+| Geometry | 20000 points per volume | 200000 points per volume |
+|---|---|---|
+| `legacy/src` (original) | `catho3` 1.03 mm; `ThinAbs::Straight` 7, 33, 44, 50, 63: 6.6–19.5 µm (as in 4.1) | not run |
+| `src` (fixed) | **no overlaps** (8904 volumes) | **no overlaps** |
+
+Physics: 400 events of 10 GeV e- at η = 0.2 (FTFP_BERT, cut 0.01 mm) give
+⟨E<sub>LAr</sub>⟩ = 1922.5 ± 10.1 MeV with the fixed geometry and 1914.6 ± 9.9 MeV with the original one,
+a difference of 0.6σ. The removed material is 0.27 mm of cathode outside `STAC` and 0.2 mm of lead
+at the η = 1.475 edge, outside the readout region.
 
 ---
 
@@ -311,7 +344,7 @@ because this machine has no NVIDIA GPU.
 | User code | Sensitive detector compatible with returned GPU steps | ✅ verified (`Results.md` 3d, section 3.2 here) |
 | User code | Primary identification without `ParentID == 0` | ✅ fixed (`ATLLArBarrelTrackingAction.cc`) |
 | Macros | `/adept/*` before `/run/initialize`, `/run/setCut` before `/run/initialize`, energy-loss fluctuations on, GPU in all regions | ✅ present (`runcards/benchmarks/*_adept.mac`) |
-| Geometry | Fix the two overlaps before GPU production runs | ⚠️ recommended (section 4) |
+| Geometry | Fix the two overlaps before GPU production runs | ✅ fixed (section 4.6; original in `legacy/src`) |
 | Dependencies | CUDA, VecCore, VecGeom (CUDA), G4HepEm (CUDA), G4VG, AdePT; versions for AdePT 0.4.3 | ⚠️ updated list (7.4) |
 | Docs | Matched CPU reference for AdePT | ⚠️ recommended (Appendix A) |
 
