@@ -2,12 +2,12 @@
 // \file PhysicsList.cc
 // \brief: implementation of PhysicsList class
 //         for G4HepEm usage
-// \author: Lorenzo Pezzotti (CERN EP-SFT-sim) 
+// \author: Lorenzo Pezzotti (CERN EP-SFT-sim)
 //          @lopezzot
 // \start date: 20 February 2023
 //**************************************************
 
-//Includers from hepemlib files
+// Includers from hepemlib files
 //
 #include "PhysicsList.hh"
 #ifdef G4HepEm_HAS_PROCESS
@@ -15,35 +15,34 @@
 #endif
 #include "PhysListHepEmTracking.hh"
 
-//Includers from Geant4
+// Includers from Geant4
 //
 #include "G4LossTableManager.hh"
 #include "G4SystemOfUnits.hh"
 
-PhysicsList::PhysicsList(const G4String& G4HepEmType)
-    : G4VModularPhysicsList(),
-      fG4HepEmType(G4HepEmType) {
-    
-    //Set default cuts
-    //
-    G4LossTableManager::Instance();
-    SetDefaultCutValue(0.7*mm);
+PhysicsList::PhysicsList(const G4String &G4HepEmType) : G4VModularPhysicsList(), fG4HepEmType(G4HepEmType)
+{
 
-    if (fG4HepEmType=="G4HepEmTracking") RegisterPhysics( new PhysListHepEmTracking );
+  // Set default cuts
+  //
+  G4LossTableManager::Instance();
+  SetDefaultCutValue(0.7 * mm);
 
-    #ifdef G4HepEm_HAS_PROCESS
-    else if (fG4HepEmType=="G4HepEm") RegisterPhysics( new PhysListHepEm );
-    #endif
+  if (fG4HepEmType == "G4HepEmTracking") RegisterPhysics(new PhysListHepEmTracking);
 
-    else {
-    
-        G4ExceptionDescription msg;
-        msg << "Wrong G4HepEM constructor type ";
-        G4Exception("PhysicsList::PhysicsList()",
-        "MyCode0004", FatalException, msg);
-    }
+#ifdef G4HepEm_HAS_PROCESS
+  else if (fG4HepEmType == "G4HepEm")
+    RegisterPhysics(new PhysListHepEm);
+#endif
+
+  else {
+
+    G4ExceptionDescription msg;
+    msg << "Wrong G4HepEM constructor type ";
+    G4Exception("PhysicsList::PhysicsList()", "MyCode0004", FatalException, msg);
+  }
 }
 
-PhysicsList::~PhysicsList(){}
+PhysicsList::~PhysicsList() {}
 
 //**************************************************

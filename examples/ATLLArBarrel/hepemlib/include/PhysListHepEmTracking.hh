@@ -4,7 +4,7 @@
 //         for G4HepEm usage
 // \source: This class is taken from G4HepEm
 //          example
-// \adaptation: Lorenzo Pezzotti (CERN EP-SFT-sim) 
+// \adaptation: Lorenzo Pezzotti (CERN EP-SFT-sim)
 //          @lopezzot
 // \start date: 20 February 2023
 //**************************************************
@@ -17,14 +17,14 @@
 
 class PhysListHepEmTracking : public G4VPhysicsConstructor {
 
-  public: 
-     PhysListHepEmTracking(const G4String& name = "HepEmTracking");
-    ~PhysListHepEmTracking();
+public:
+  PhysListHepEmTracking(const G4String &name = "HepEmTracking");
+  ~PhysListHepEmTracking();
 
-  public: 
-    void ConstructParticle() override;
+public:
+  void ConstructParticle() override;
 
-    void ConstructProcess() override;
+  void ConstructProcess() override;
 };
 
 #endif

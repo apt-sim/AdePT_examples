@@ -4,12 +4,12 @@
 //         for G4HepEm usage
 // \source: This class is taken from G4HepEm
 //          example
-// \adaptation: Lorenzo Pezzotti (CERN EP-SFT-sim) 
+// \adaptation: Lorenzo Pezzotti (CERN EP-SFT-sim)
 //          @lopezzot
 // \start date: 20 February 2023
 //**************************************************
 
-//Includers from hepemlib files
+// Includers from hepemlib files
 //
 #include "PhysListHepEm.hh"
 
@@ -17,7 +17,7 @@
 //
 #include "G4HepEmProcess.hh"
 
-//Includers from Geant4
+// Includers from Geant4
 //
 #include "G4ParticleDefinition.hh"
 #include "G4ProcessManager.hh"
@@ -25,7 +25,7 @@
 #include "G4EmParameters.hh"
 #include "G4BuilderType.hh"
 #include "G4SystemOfUnits.hh"
-#include "G4BosonConstructor.hh"  //particles
+#include "G4BosonConstructor.hh" //particles
 #include "G4LeptonConstructor.hh"
 #include "G4MesonConstructor.hh"
 #include "G4BosonConstructor.hh"
@@ -33,54 +33,56 @@
 #include "G4IonConstructor.hh"
 #include "G4ShortLivedConstructor.hh"
 
-PhysListHepEm::PhysListHepEm(const G4String& name)
-    : G4VPhysicsConstructor(name) {
+PhysListHepEm::PhysListHepEm(const G4String &name) : G4VPhysicsConstructor(name)
+{
 
-    G4EmParameters* param = G4EmParameters::Instance();
-    param->SetDefaults();
-    
-    param->SetMscRangeFactor(0.04);
+  G4EmParameters *param = G4EmParameters::Instance();
+  param->SetDefaults();
 
-    SetPhysicsType(bElectromagnetic);
+  param->SetMscRangeFactor(0.04);
+
+  SetPhysicsType(bElectromagnetic);
 }
 
-PhysListHepEm::~PhysListHepEm(){}
+PhysListHepEm::~PhysListHepEm() {}
 
-void PhysListHepEm::ConstructParticle(){
-    
-    G4BosonConstructor  pBosonConstructor;
-    pBosonConstructor.ConstructParticle();
+void PhysListHepEm::ConstructParticle()
+{
 
-    G4LeptonConstructor pLeptonConstructor;
-    pLeptonConstructor.ConstructParticle();
+  G4BosonConstructor pBosonConstructor;
+  pBosonConstructor.ConstructParticle();
 
-    G4MesonConstructor pMesonConstructor;
-    pMesonConstructor.ConstructParticle();
+  G4LeptonConstructor pLeptonConstructor;
+  pLeptonConstructor.ConstructParticle();
 
-    G4BaryonConstructor pBaryonConstructor;
-    pBaryonConstructor.ConstructParticle();
+  G4MesonConstructor pMesonConstructor;
+  pMesonConstructor.ConstructParticle();
 
-    G4IonConstructor pIonConstructor;
-    pIonConstructor.ConstructParticle();
+  G4BaryonConstructor pBaryonConstructor;
+  pBaryonConstructor.ConstructParticle();
 
-    G4ShortLivedConstructor pShortLivedConstructor;
-    pShortLivedConstructor.ConstructParticle();
+  G4IonConstructor pIonConstructor;
+  pIonConstructor.ConstructParticle();
+
+  G4ShortLivedConstructor pShortLivedConstructor;
+  pShortLivedConstructor.ConstructParticle();
 }
 
-void PhysListHepEm::ConstructProcess(){
+void PhysListHepEm::ConstructProcess()
+{
 
-  G4PhysicsListHelper* ph = G4PhysicsListHelper::GetPhysicsListHelper();
+  G4PhysicsListHelper *ph = G4PhysicsListHelper::GetPhysicsListHelper();
 
   // creae the only one G4HepEm process that will be assigned to e-/e+ and gamma
-  G4HepEmProcess* hepEmProcess = new G4HepEmProcess();
+  G4HepEmProcess *hepEmProcess = new G4HepEmProcess();
 
   // Add standard EM Processes
   //
   auto aParticleIterator = GetParticleIterator();
   aParticleIterator->reset();
-  while( (*aParticleIterator)() ){
-    G4ParticleDefinition* particle = aParticleIterator->value();
-    G4String particleName = particle->GetParticleName();
+  while ((*aParticleIterator)()) {
+    G4ParticleDefinition *particle = aParticleIterator->value();
+    G4String particleName          = particle->GetParticleName();
 
     if (particleName == "gamma") {
 
@@ -90,17 +92,15 @@ void PhysListHepEm::ConstructProcess(){
     } else if (particleName == "e-") {
 
       // Add G4HepEm process to e-: includes Ionisation, Bremsstrahlung, MSC for e-
-     particle->GetProcessManager()->AddProcess(hepEmProcess, -1, -1, 1);
+      particle->GetProcessManager()->AddProcess(hepEmProcess, -1, -1, 1);
 
     } else if (particleName == "e+") {
 
       // Add G4HepEm process to e+: includes Ionisation, Bremsstrahlung, MSC and e+e-
       // annihilation into 2 gamma interactions for e+
       particle->GetProcessManager()->AddProcess(hepEmProcess, -1, -1, 1);
-
     }
   }
-
 }
 
 //**************************************************
