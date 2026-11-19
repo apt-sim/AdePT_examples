@@ -12,9 +12,9 @@ electrons, positrons and photons on an NVIDIA GPU with [AdePT](https://github.co
   check, macros) was added here on 2026-11-19, so every step below is now applied (✅). The guide can still be followed
   step by step from the original code.
 - **How it was checked:** this guide was written on a Mac without an NVIDIA GPU, against the AdePT 0.4.3 and
-  0.4.2 sources. The new code of steps 2 and 3 was only syntax-checked: against Geant4 11.4.3 and G4HepEm
-  `20261106`, with stub AdePT headers that have the 0.4.3 signatures. It must be built and validated on the
-  GPU machine (step 8).
+  0.4.2 sources. The code of steps 1–3 and 6 was then built and run on the GPU machine of `Results.md` (AdePT
+  0.4.2, 2026-11-19): `electron50GeV_adept.mac` reproduces `Results.md` 3b, and a macro without `/adept/` lines
+  runs on the GPU with the defaults of option B.
 
 See also `Review.md`, section 7, and `BUILD_OPTIONS.md`, "Running with AdePT".
 
@@ -792,5 +792,6 @@ Ordered by impact, all observed in this project:
 | `hepemlib/` + `WITH_G4HepEmEM` | matched CPU reference (`Review.md` Appendix A) | ✅ |
 | `README.md`, `BUILD_OPTIONS.md` | document `WITH_ADEPT`, macro rules, pitfalls 1–3, option B and the cut default | ✅ |
 
-Option B and the default cut were compiled on macOS against the AdePT 0.4.2 interfaces, but not yet run on the GPU.
-With the `*_adept.mac` macros, which set the same values, the physics is unchanged: repeat check 3 of step 8 once.
+Option B, the default cut and the C++20 build were checked on the GPU machine (AdePT 0.4.2, 2026-11-19):
+`electron50GeV_adept.mac` reproduces `Results.md` 3b, and `run_adept.mac` without its `/adept/` lines runs on the
+GPU with the same settings.
