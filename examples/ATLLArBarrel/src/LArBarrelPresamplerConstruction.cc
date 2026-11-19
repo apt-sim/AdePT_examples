@@ -20,6 +20,7 @@
 #include "G4Box.hh"
 #include "G4Tubs.hh"
 #include "G4Trd.hh"
+#include "G4IntersectionSolid.hh"
 #include "G4LogicalVolume.hh"
 #include "G4PVPlacement.hh"
 #include "globals.hh"
@@ -356,6 +357,20 @@ G4LogicalVolume *LArBarrelPresamplerConstruction::GetEnvelope()
     for (j = 0; j < mod[i][2]; j++)
 
     {
+      // In a tilted module the first cathode sticks out of the module by about 1 mm
+      // (as in ATLAS, where the electrodes are cut by the module walls): clip it
+      // with the module envelope, shrunk by epsil to avoid coincident surfaces
+      if (j == 0 && mod[i][3] != 0) {
+        G4Trd *clip_module = new G4Trd(name + "Module::Clip", mod_xm, mod_xp, mod_leng[i] / 2 - epsil,
+                                       mod_leng[i] / 2 - epsil, mod_heig[i] / 2);
+        G4IntersectionSolid *catho3_clipped =
+            new G4IntersectionSolid(name + "Cathode3Clipped", clip_module, catho3, elec_rot,
+                                    G4ThreeVector(0. * CLHEP::mm, YStartC[i], elec_trans));
+        G4LogicalVolume *LV_catho3_clipped = new G4LogicalVolume(catho3_clipped, CathodeMat, name + "Cathode3Clipped");
+        G4VPhysicalVolume *cath_phys =
+            new G4PVPlacement(0, G4ThreeVector(), LV_catho3_clipped, "catho3", PsModuleLog[i], false, 0);
+        continue;
+      }
       G4VPhysicalVolume *cath_phys =
           new G4PVPlacement(elec_rot, G4ThreeVector(0. * CLHEP::mm, YStartC[i] + j * mod[i][4] * cmm, elec_trans),
                             LV_catho3, "catho3", PsModuleLog[i], false, 0);

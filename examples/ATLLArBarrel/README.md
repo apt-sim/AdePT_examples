@@ -90,7 +90,10 @@ Parser options
 | `WITH_GPS` | `OFF` | Use `G4GeneralParticleSource` as primary generator (`/gps/` macro commands). By default `G4ParticleGun` is used (`/gun/` macro commands) |
 | `WITH_G4HepEm` | `OFF` | Build with G4HepEm, see [G4HepEm integration](#g4hepem-integration) |
 | `WITH_G4HepEmTracking` | `OFF` | Use the G4HepEm specialized tracking (`G4HepEmTrackingManager`); switched on automatically with recent G4HepEm versions, see [G4HepEm integration](#g4hepem-integration) |
-| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with [AdePT](https://github.com/apt-sim/AdePT) (requires CUDA, AdePT, VecGeom and G4HepEm built with CUDA; not compatible with `WITH_G4HepEm`) |
+| `WITH_G4HepEmEM` | `OFF` | With `WITH_G4HepEm`: keep the reference physics list (`-p`, default `FTFP_BERT`) and replace only its EM constructor with `G4EmStandardPhysics` + `G4HepEmTrackingManager` (nuclear processes of e-, e+, gamma kept). This is the CPU reference for AdePT, see [G4HepEm integration](#g4hepem-integration) |
+| `WITH_G4HepEmEM_MSC_MULTISTEPS` | `OFF` | With `WITH_G4HepEmEM`: let G4HepEm do several MSC steps per transportation step (the G4HepEm default). `OFF` by default, as AdePT does on the GPU: only with `OFF` does the CPU reference reproduce AdePT (see [Results.md](Results.md), section 3e) |
+| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with [AdePT](https://github.com/apt-sim/AdePT) (requires CUDA, AdePT, VecGeom and G4HepEm built with CUDA; not compatible with `WITH_G4HepEm`). Only lists with the default EM option (`-p FTFP_BERT`, `..._EM0`, ...): lists with an EM suffix such as `_EMZ`, `_LIV` or `__GS` stop with `ATLLArBarrel001` |
+| `WITH_LEGACY_GEOMETRY` | `OFF` | Build the original geometry kept in `legacy/src/` instead of the fixed one (the original has a 1.03 mm presampler cathode overlap and 6–30 µm thin-absorber overlaps, see [Review.md](Review.md) section 4) |
 
 See [BUILD_OPTIONS.md](BUILD_OPTIONS.md) for a detailed description of all options, their combinations, build examples and how to run with AdePT. Performance and validation results for the CPU, G4HepEm and AdePT configurations are in [Results.md](Results.md).
 
@@ -102,7 +105,7 @@ cmake -DGeant4_DIR=/absolute_path_to/geant4-install/lib64/cmake/Geant4/ -DWITH_G
 Note: the `cmake/` directory contains a `FindEXPAT.cmake` wrapper that drops the expat version requirement recorded by Geant4. It allows building against a Geant4 installation configured with a non-system expat (e.g. from Linuxbrew) while linking the system expat. When building Geant4 yourself, `-DGEANT4_USE_SYSTEM_EXPAT=OFF` avoids the issue altogether.
 
 ### Build as part of AdePT_examples
-Inside the [AdePT_examples](https://github.com/apt-sim/AdePT_examples) repository ATLLArBarrel is added with `add_subdirectory` from `examples/CMakeLists.txt` and is always built with `WITH_ADEPT=ON` (`WITH_G4HepEm` and `WITH_G4HepEmTracking` are forced `OFF`). From the top of AdePT_examples:
+Inside the [AdePT_examples](https://github.com/apt-sim/AdePT_examples) repository ATLLArBarrel is added with `add_subdirectory` from `examples/CMakeLists.txt` and is always built with `WITH_ADEPT=ON` (`WITH_G4HepEm`, `WITH_G4HepEmTracking`, `WITH_G4HepEmEM` and `WITH_G4HepEmEM_MSC_MULTISTEPS` are forced `OFF`). From the top of AdePT_examples:
 ```sh
 cmake -S . -B build -DCMAKE_PREFIX_PATH="<adept_install>;<geant4_install>;<vecgeom_install>;<g4hepem_install>"
 cmake --build build -- -j
@@ -176,6 +179,24 @@ Example with Geant4-11.4.3 and a recent G4HepEm (tracking mode only):
    make
    ```
    At runtime the output shows `--> Using G4HepEm with specialized tracking`.
+
+The `hepemlib/` physics list is **EM only**: it has no hadronic physics and no photo/electro-nuclear processes,
+and at 50 GeV it deposits about 0.4 % more energy in the LAr than `FTFP_BERT` ([Review.md](Review.md), section 6.3).
+For a like-for-like comparison with `FTFP_BERT`, and as the CPU reference for AdePT, add `-DWITH_G4HepEmEM=ON`:
+the reference physics list chosen with `-p` is kept and only its EM constructor is replaced by
+`G4EmStandardPhysics` with the `G4HepEmTrackingManager` for e-, e+ and gamma (the same construction as AdePT's
+`G4EmStandardPhysics_HepEm`):
+   ```sh
+   cmake -DGeant4_DIR=/path-to/geant4-v11.4.3-install/lib64/cmake/Geant4/ -DG4HepEm_DIR=/path-to/g4hepem-install/lib64/cmake/G4HepEm/ -DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON ../ATLLArBarrel/
+   make
+   ./ATLLArBarrel -m ../runcards/benchmarks/electron50GeV.mac -t 8 -p FTFP_BERT
+   ```
+   At runtime the output shows `--> Using Geant4 reference physics list FTFP_BERT with G4HepEm EM tracking`.
+
+   By default this configuration disables the G4HepEm multiple steps in MSC + transportation, because AdePT does
+   not use them on the GPU, and prints `--> G4HepEm: multiple steps in MSC + transportation OFF (as AdePT on GPU)`.
+   Add `-DWITH_G4HepEmEM_MSC_MULTISTEPS=ON` to keep the G4HepEm default instead. The two settings differ by about
+   0.25 % in the LAr energy at 50 GeV ([Results.md](Results.md), section 3e).
 
 <!--Using VecGeom-->
 ## Using VecGeom

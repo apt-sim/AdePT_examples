@@ -28,6 +28,7 @@
 
 #ifdef USE_G4HepEm
 #include "PhysicsList.hh" //it is built as a separate library in hepem
+#include "G4EmStandardPhysics_G4HepEm.hh"
 #endif
 
 #ifdef USE_ADEPT
@@ -69,21 +70,28 @@ int main(int argc, char **argv)
   // CLI parsing
   //
   for (G4int i = 1; i < argc; i = i + 2) {
-    if (G4String(argv[i]) == "-m")
+    const G4String option = argv[i];
+    if (option == "-h") {
+      CLIOutputs::PrintHelp();
+      return 0;
+    }
+    // all the other options take a value
+    if (i + 1 >= argc) {
+      CLIOutputs::PrintError();
+      return 1;
+    }
+    if (option == "-m")
       macro = argv[i + 1];
-    else if (G4String(argv[i]) == "-u")
+    else if (option == "-u")
       session = argv[i + 1];
-    else if (G4String(argv[i]) == "-p")
+    else if (option == "-p")
       custom_pl = argv[i + 1];
 #ifdef G4MULTITHREADED
-    else if (G4String(argv[i]) == "-t") {
+    else if (option == "-t") {
       nThreads = G4UIcommand::ConvertToInt(argv[i + 1]);
     }
 #endif
-    else if (G4String(argv[i]) == "-h") {
-      CLIOutputs::PrintHelp();
-      return 0;
-    } else {
+    else {
       CLIOutputs::PrintError();
       return 1;
     }
@@ -117,13 +125,37 @@ int main(int argc, char **argv)
   auto physListFactory = new G4PhysListFactory();
   auto physicsList     = physListFactory->GetReferencePhysList(custom_pl);
 #ifdef USE_ADEPT // transport e-, e+ and gamma on GPU with AdePT
+  // G4EmStandardPhysics_AdePT replaces the EM constructor with option 0:
+  // refuse reference lists that use another EM option (suffixes of G4PhysListFactory;
+  // "_EM0" is option 0 and is fine)
+  for (const G4String suffix : {"_EMV", "_EMX", "_EMY", "_EMZ", "_LIV", "_PEN", "__GS", "__SS", "_WVI", "__LE"}) {
+    if (G4StrUtil::ends_with(custom_pl, suffix)) {
+      G4ExceptionDescription msg;
+      msg << "Physics list " << custom_pl << " uses a non-default EM option, which "
+          << "G4EmStandardPhysics_AdePT would replace with option 0. "
+          << "Use a list without EM suffix (or with _EM0) when running with AdePT.";
+      G4Exception("main()", "ATLLArBarrel001", FatalException, msg);
+    }
+  }
   G4cout << "--> Using AdePT for e-, e+ and gamma" << G4endl;
   physicsList->ReplacePhysics(new G4EmStandardPhysics_AdePT());
 #endif
   runManager->SetUserInitialization(physicsList);
 #endif
 
-#ifdef USE_G4HepEm
+#ifdef USE_G4HepEmEM // reference list, only its EM constructor uses G4HepEm tracking
+  G4cout << "--> Using Geant4 reference physics list " << custom_pl << " with G4HepEm EM tracking" << G4endl;
+  auto physListFactory = new G4PhysListFactory();
+  auto physicsList     = physListFactory->GetReferencePhysList(custom_pl);
+#ifdef USE_G4HepEmEM_MSC_MULTISTEPS // G4HepEm default
+  G4cout << "--> G4HepEm: multiple steps in MSC + transportation ON (G4HepEm default)" << G4endl;
+  physicsList->ReplacePhysics(new G4EmStandardPhysics_G4HepEm(true));
+#else // as AdePT on GPU
+  G4cout << "--> G4HepEm: multiple steps in MSC + transportation OFF (as AdePT on GPU)" << G4endl;
+  physicsList->ReplacePhysics(new G4EmStandardPhysics_G4HepEm(false));
+#endif
+  runManager->SetUserInitialization(physicsList);
+#elif defined(USE_G4HepEm)
 #ifdef USE_G4HepEmTracking // use G4HepEm with specialized tracking
   G4cout << "--> Using G4HepEm with specialized tracking" << G4endl;
   runManager->SetUserInitialization(new PhysicsList("G4HepEmTracking"));

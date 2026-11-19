@@ -3,6 +3,8 @@ add_library(hepemlib
     include/PhysListHepEmTracking.hh
     src/PhysicsList.cc
     src/PhysListHepEmTracking.cc
+    include/G4EmStandardPhysics_G4HepEm.hh
+    src/G4EmStandardPhysics_G4HepEm.cc
 )
 
 # G4HepEmProcess is only available in older G4HepEm versions

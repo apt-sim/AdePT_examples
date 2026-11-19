@@ -39,12 +39,16 @@ Run from the build directory, after sourcing `geant4.sh`:
 | 1b | `./ATLLArBarrel -m ../runcards/benchmarks/electron50GeV.mac -t 1` (in `build-cpu` and `build-hepem`) |
 | 3a | `build-cpu`: `gamma5GeV.mac -t 1`; `build-adept`: `gamma5GeV_adept.mac -t 1` |
 | 3b | `build-cpu`: `electron50GeV.mac -t 8`; `build-adept`: `electron50GeV_adept.mac -t 8` |
+| 3e | `build-cpu`, `build-hepemem` (`-DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON`) and `build-adept`: `electron50GeV*.mac` and `gamma5GeV*.mac` with `/run/beamOn 10000`, `-t 8` |
 | 4 | `build-cpu`: `./ATLLArBarrel -m ../runcards/benchmarks/geometry_test.mac -t 1` |
 
 Section 2 uses AdePT's own `example1` (`example1.mac`) built with `VECGEOM_NAV=tuple` and `index`.
 The energy statistics are computed from the `EnergyLAr` branch of `ATLLArBarrelout_Run0.root`.
-With the default (fixed) seeds, repeated runs give bit-identical energy distributions, both on CPU
-and with AdePT.
+With the default (fixed) seeds, repeated runs give the same energy distributions, both on CPU
+and with AdePT, up to floating-point rounding. With AdePT and 8 threads, per-event energies can
+differ in the last bit, at most 6·10⁻¹⁶ relative (measured on 2026-11-19), most likely because the
+steps returned from the GPU are summed in a different order. Means, rms and minima are unchanged to
+all the digits quoted here.
 
 ## 1. G4HepEm vs Geant4 FTFP_BERT (CPU)
 
@@ -277,6 +281,76 @@ The pion sample confirms that the flag still works for real primaries. Its mean 
 1412.5 ± 61.8 MeV with AdePT and 1371.5 ± 61.9 MeV on the CPU, compatible with each other (0.5 sigma) with a large
 error. Returning the first and last steps took 20.5 s against 20.4 s for 150 electrons (one run).
 
+### 3e. AdePT against the matched G4HepEm CPU reference (2026-11-19)
+
+Measured with the fixed geometry (`src/`) and the current code, on the machine of this page. Three setups:
+
+- **FTFP_BERT**: the default CPU build.
+- **matched**: `-DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON`, i.e. FTFP_BERT with its EM constructor replaced by
+  `G4EmStandardPhysics` + `G4HepEmTrackingManager` for e-, e+ and gamma: the same EM physics as AdePT, on the CPU.
+- **AdePT**: built from the top of AdePT_examples, `*_adept.mac` macros.
+
+All use the benchmark macros of `runcards/benchmarks/` with `/run/beamOn` changed as stated, and 8 threads.
+`EnergyLArNoNoise` in MeV, errors are standard errors of the mean.
+
+**MSC stepping must match.** G4HepEm on the CPU by default lets e-/e+ do several MSC steps within one
+transportation step (`Multiple steps in MSC+Trans. : 1` in the G4HepEm printout). AdePT disables this on the
+GPU (`AdePTConfiguration`, default `false`; the printout shows `0`). 1000 electrons of 50 GeV:
+
+| Setup | EnergyLArNoNoise | vs FTFP_BERT | AdePT − setup |
+|---|---|---|---|
+| FTFP_BERT | 9911.8 ± 4.1 | – | +13.5 ± 5.9 (2.3 sigma) |
+| matched, multiple MSC steps on (G4HepEm default) | 9900.9 ± 4.4 | −0.11 % | **+24.4 ± 6.2 (4.0 sigma)** |
+| matched, multiple MSC steps off (as AdePT) | 9924.5 ± 5.8 | +0.13 % | **+0.7 ± 7.2 (0.1 sigma)** |
+| AdePT | 9925.3 ± 4.3 | +0.14 % | – |
+
+This is the same pattern as section 3c ("G4HepEm on CPU, default" against "AdePT settings"). With the MSC
+setting matched, the CPU reproduces AdePT. `WITH_G4HepEmEM` therefore disables the multiple MSC steps by default;
+`-DWITH_G4HepEmEM_MSC_MULTISTEPS=ON` restores the G4HepEm default (BUILD_OPTIONS.md). The rows "matched" below use
+the default (off).
+
+**10000 events.** 50 GeV electrons and 5 GeV photons. The compartment energies (`FrontHitsEdep`,
+`MiddleHitsEdep`, `BackHitsEdep`, summed over the cells) include the electronic noise, which has zero mean. The
+front fraction is Front / (Front + Middle + Back), per event.
+
+| 50 GeV e⁻, 10000 events | FTFP_BERT | matched | AdePT | AdePT − matched | AdePT − FTFP_BERT |
+|---|---|---|---|---|---|
+| EnergyLArNoNoise | 9915.0 ± 1.5 | 9922.7 ± 1.8 | 9924.0 ± 1.6 | **+1.4 ± 2.4 (+0.01 %, 0.6 sigma)** | +9.1 ± 2.2 (+0.09 %, 4.1 sigma) |
+| EnergyLAr | 9915.8 ± 2.3 | 9919.4 ± 2.4 | 9925.4 ± 2.3 | +6.0 ± 3.4 (1.8 sigma) | +9.6 ± 3.2 (3.0 sigma) |
+| Front | 2406.8 ± 6.6 | 2415.5 ± 6.7 | 2406.2 ± 6.6 | −9.3 ± 9.4 (−1.0 sigma) | −0.6 ± 9.3 (−0.1 sigma) |
+| Middle | 7450.1 ± 6.7 | 7445.4 ± 6.9 | 7460.4 ± 6.8 | +15.0 ± 9.7 (+1.6 sigma) | +10.4 ± 9.5 (+1.1 sigma) |
+| Back | 58.9 ± 0.8 | 58.4 ± 0.8 | 58.8 ± 0.8 | +0.3 ± 1.1 (+0.3 sigma) | −0.2 ± 1.1 (−0.1 sigma) |
+| Front fraction | 0.2428 ± 0.0007 | 0.2437 ± 0.0007 | 0.2426 ± 0.0007 | −0.0011 ± 0.0010 (−1.1 sigma) | −0.0003 ± 0.0009 (−0.3 sigma) |
+| rms / min of EnergyLArNoNoise | 148.2 / 6097.5 | 178.6 / 2967.6 | 160.7 / 2402.1 | | |
+
+| 5 GeV γ, 10000 events | FTFP_BERT | matched | AdePT | AdePT − matched | AdePT − FTFP_BERT |
+|---|---|---|---|---|---|
+| EnergyLArNoNoise | 970.0 ± 0.5 | 971.2 ± 0.5 | 970.6 ± 0.5 | **−0.6 ± 0.7 (−0.06 %, −0.8 sigma)** | +0.6 ± 0.7 (+0.07 %, 0.9 sigma) |
+| EnergyLAr | 969.1 ± 1.8 | 968.7 ± 1.8 | 971.3 ± 1.8 | +2.6 ± 2.5 (1.1 sigma) | +2.2 ± 2.5 (0.9 sigma) |
+| Front | 362.9 ± 1.9 | 360.6 ± 1.9 | 366.4 ± 1.9 | +5.8 ± 2.7 (+2.2 sigma) | +3.5 ± 2.7 (+1.3 sigma) |
+| Middle | 603.7 ± 1.8 | 604.5 ± 1.9 | 601.6 ± 1.8 | −3.0 ± 2.6 (−1.1 sigma) | −2.2 ± 2.6 (−0.8 sigma) |
+| Back | 2.5 ± 0.6 | 3.5 ± 0.6 | 3.4 ± 0.6 | −0.2 ± 0.9 (−0.2 sigma) | +0.9 ± 0.9 (+1.0 sigma) |
+| Front fraction | 0.3718 ± 0.0019 | 0.3696 ± 0.0019 | 0.3742 ± 0.0019 | +0.0046 ± 0.0026 (+1.7 sigma) | +0.0024 ± 0.0026 (+0.9 sigma) |
+| rms / min of EnergyLArNoNoise | 50.4 / 105.8 | 51.0 / 175.6 | 50.8 / 307.8 | | |
+
+- **Total energy.** AdePT agrees with the matched CPU reference to 0.01 % at 50 GeV and 0.06 % at 5 GeV, within
+  0.6–0.8 sigma. The remaining +0.08–0.09 % of both AdePT and the matched reference against FTFP_BERT at 50 GeV
+  (3–4 sigma with 10000 events) is the difference between the G4HepEm and the Geant4 EM physics, not a GPU effect.
+- **Longitudinal shower shape.** In the 300/1000-event samples the front fraction was lower with AdePT at both
+  energies (1.3–1.8 sigma), hinting at a slightly deeper shower. With 10000 events this is not confirmed: the
+  difference is −1.1 sigma at 50 GeV and **+1.7 sigma, with the opposite sign**, at 5 GeV. The Front/Middle
+  differences are within 2.2 sigma in all 16 comparisons (Front, Middle, Back and front fraction; AdePT against
+  both references; two energies), as expected from statistical
+  fluctuations. No difference in the longitudinal shower shape is seen at the 0.4 % (50 GeV) and 1.2 % (5 GeV)
+  level of the front fraction.
+- **Tails.** The lowest-energy events (photonuclear interactions, section 3b) occur in all three setups; events
+  below 80 % of the median: 5, 9, 4 at 50 GeV and 20, 23, 23 at 5 GeV. Excluding them does not change the
+  conclusions (50 GeV core means 9916.3 ± 1.3, 9926.0 ± 1.3 and 9925.4 ± 1.4 MeV).
+- `HadInteraction` = 0 and no `G4Exception` in all runs.
+- **Time** (indicative only: the three setups ran at the same time on the 24-core machine, 24 threads in total).
+  50 GeV, 10000 events: FTFP_BERT 2345 s, matched 1854 s, AdePT 1282 s. 5 GeV: 178 s, 191 s and 511 s
+  (AdePT with 8 threads is slower than the CPU for 5 GeV photons, as in section 3a).
+
 ## 4. Geometry overlap checks
 
 Tolerance 10 um, 200 random points per volume.
@@ -329,6 +403,7 @@ were taken after these fixes:
 - Repetitions use the same random seed, so the timing errors reflect machine noise only, not
   event-to-event variation.
 - The G4HepEm comparisons involve an EM-only physics list and a different MSC range factor (0.04),
-  so they are not a matched control for the AdePT comparison of section 3.
+  so they are not a matched control for the AdePT comparison of section 3. The matched control is now
+  available with `-DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON` (see BUILD_OPTIONS.md and `Review.md`, 6.3).
 - The GPU is a consumer card with low FP64 throughput (AdePT computes in double precision), and it
   also drives the desktop display. GPU results are not representative of data-centre GPUs.

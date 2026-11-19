@@ -1,7 +1,7 @@
 # ATLLArBarrel – Review
 
-Independent review of ATLLArBarrel at commit `a22047d` (master, 2026-11-10): code review, geometry
-checks, builds with Geant4 alone and with G4HepEm, speed tests, and the changes needed to run with
+Independent review of ATLLArBarrel at commit `d91769b` (`master` of the original ATLLArBarrel
+repository, imported here; 2026-11-10): code review, geometry checks, builds with Geant4 alone and with G4HepEm, speed tests, and the changes needed to run with
 AdePT on a GPU. Review date: 2026-11-17.
 
 Companion documents in this repository: [README.md](README.md), [BUILD_OPTIONS.md](BUILD_OPTIONS.md),
@@ -32,7 +32,8 @@ machine, both numbers are given.
   `catho3` protrudes by **1.03 mm** from its module. At higher sampling density (2000 and 20000 points
   per volume) the check also finds **6–30 µm protrusions of five `LAr::EMB::ThinAbs::Straight` volumes**
   from `LAr::EMB::STAC`, at the high-z end of the accordion. They were not visible with the
-  200 points used in `Results.md`. Both are explained, with proposed fixes, in section 4.
+  200 points used in `Results.md`. Both are explained in section 4. **Both are now fixed** (4.6); the
+  original geometry is kept in `legacy/src` and can be built with `-DWITH_LEGACY_GEOMETRY=ON`.
 - **Speed.** On a 6-core Intel i5-9600K, G4HepEm makes the simulation **1.40–1.51× faster** than
   Geant4 `FTFP_BERT`, for 5 GeV photons and 50 GeV electrons, with 1 and 6 threads. This agrees with
   the 1.44× of `Results.md` on a 24-core EL9 machine. Multithreaded scaling on 6 cores is about 5.2×
@@ -42,14 +43,19 @@ machine, both numbers are given.
   processes. At 50 GeV it deposits **+0.4 % more energy in the LAr than `FTFP_BERT` (3.1–3.6 σ)**, while
   a **matched configuration** (FTFP_BERT with only its EM constructor using the G4HepEm tracking
   manager, Appendix A) agrees with `FTFP_BERT` within 0.1 % and is just as fast. I recommend adding
-  this matched configuration to the project as the reference for G4HepEm, and for comparisons with AdePT.
+  this matched configuration to the project as the reference for G4HepEm, and for comparisons with AdePT
+  (added on 2026-11-19 as `-DWITH_G4HepEmEM=ON`).
 - **AdePT.** The project already contains a working AdePT integration (`WITH_ADEPT`), validated on an
   NVIDIA RTX 2070 SUPER with AdePT 0.4.2 (`Results.md`, section 3). Checked against the AdePT
   sources (v0.4.2 and v0.4.3, released today), the integration follows the documented pattern. Section 7
   lists everything that is needed to run on a GPU, what is already in place, and the changes still
-  recommended: CMake minimum version, guard against physics lists with a non-default EM option,
-  dependency versions required by AdePT 0.4.3, and a few smaller points. AdePT cannot run on this
+  recommended: CMake minimum version, guard against physics lists with a non-default EM option (since added
+  to the project and tested on the GPU, finding 4), dependency versions required by AdePT 0.4.3, and a few smaller points. AdePT cannot run on this
   machine (no NVIDIA GPU, no CUDA on macOS), so these changes were checked against the sources but not run.
+  The geometry fixes of section 4.6 were later checked with AdePT on the GPU machine: the LAr energy
+  does not change within statistics (section 4.6). Against the matched CPU reference, now part of the project
+  (`WITH_G4HepEmEM`, with G4HepEm's multiple MSC steps off as on the GPU), AdePT agrees to 0.01 % at 50 GeV and
+  0.06 % at 5 GeV with 10000 events, also in the longitudinal shower shape (`Results.md`, section 3e).
 
 ---
 
@@ -81,17 +87,17 @@ importance.
 
 | # | Severity | Where | Finding | Recommendation |
 |---|---|---|---|---|
-| 1 | **Medium** | `hepemlib/src/PhysicsList.cc`, `PhysListHepEmTracking.cc` | The G4HepEm configuration is an EM-only list: no hadronic physics, no photo/electro-nuclear processes, `SetDefaults()` + `MscRangeFactor 0.04`. It is therefore not a like-for-like comparison with `FTFP_BERT`, and it is not the physics that AdePT uses (`G4EmStandardPhysics_AdePT` keeps the nuclear processes of FTFP_BERT). Measured effect: +0.4 % LAr energy at 50 GeV (section 6.3), and no low-energy tail from photonuclear events. | Add the matched configuration of Appendix A (`-DWITH_G4HepEmEM=ON`: reference list from `-p`, EM constructor replaced by `G4EmStandardPhysics` + `G4HepEmTrackingManager`). Keep the EM-only list for EM-only studies and label it as such in README/Results. |
-| 2 | **Medium** | `src/LArBarrelPresamplerConstruction.cc:346, 411–416` | Known overlap: first `catho3` of the tilted module (`mod[1]`, −12°) protrudes 1.03 mm from `LAr::Barrel::Presampler::Module`. | See 4.2: the electrode pattern of this module does not fit in the module length, so a shift does not work; clip the first cathode. |
-| 3 | Low–Medium | `src/LArBarrelConstruction.cc` (thin-absorber straights, ~l.1129–1160, 1960–1993) | New: 5 `LAr::EMB::ThinAbs::Straight` copies protrude 6–30 µm from `LAr::EMB::STAC` at z ≈ 3112 mm (the end of STAC). | See 4.3: apply the same 50 µm `safety_zlen` used for other accordion pieces to the z half-length of the thin-absorber straights at the last fold. |
-| 4 | Low–Medium | `ATLLArBarrel.cc:112–116` | With `WITH_ADEPT`, `ReplacePhysics(new G4EmStandardPhysics_AdePT())` silently replaces the EM constructor of *any* list given with `-p`. For lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) the GPU then runs option-0 physics while the user believes otherwise. AdePT documents that `G4EmStandardPhysics_AdePT` is only for option 0 (its case 2). | Refuse or warn for lists whose name has an EM suffix; for those, AdePT recommends registering `AdePTTrackingManager` directly (its case 3). See 7.3. |
-| 5 | Low | `ATLLArBarrel.cc:69–83` | The command-line loop reads `argv[i+1]` without checking `i+1 < argc`: `./ATLLArBarrel -m` reads past the end of `argv` (undefined behaviour, crash). | Check `i+1 < argc` before reading the value and print the help otherwise. |
+| 1 | **Medium** | `hepemlib/src/PhysicsList.cc`, `PhysListHepEmTracking.cc` | The G4HepEm configuration is an EM-only list: no hadronic physics, no photo/electro-nuclear processes, `SetDefaults()` + `MscRangeFactor 0.04`. It is therefore not a like-for-like comparison with `FTFP_BERT`, and it is not the physics that AdePT uses (`G4EmStandardPhysics_AdePT` keeps the nuclear processes of FTFP_BERT). Measured effect: +0.4 % LAr energy at 50 GeV (section 6.3), and no low-energy tail from photonuclear events. | Add the matched configuration of Appendix A (`-DWITH_G4HepEmEM=ON`: reference list from `-p`, EM constructor replaced by `G4EmStandardPhysics` + `G4HepEmTrackingManager`). Keep the EM-only list for EM-only studies and label it as such in README/Results. **Fixed**: `WITH_G4HepEmEM` is now part of the project (Appendix A), and README/BUILD_OPTIONS label the `hepemlib/` list as EM only. |
+| 2 | **Medium** | `src/LArBarrelPresamplerConstruction.cc:346, 411–416` | Known overlap: first `catho3` of the tilted module (`mod[1]`, −12°) protrudes 1.03 mm from `LAr::Barrel::Presampler::Module`. | See 4.2: the electrode pattern of this module does not fit in the module length, so a shift does not work; clip the first cathode. **Fixed** (4.6). |
+| 3 | Low–Medium | `src/LArBarrelConstruction.cc` (thin-absorber straights, ~l.1129–1160, 1960–1993) | New: 5 `LAr::EMB::ThinAbs::Straight` copies protrude 6–30 µm from `LAr::EMB::STAC` at z ≈ 3112 mm (the end of STAC). | See 4.3: apply the same 50 µm `safety_zlen` used for other accordion pieces to the z half-length of the thin-absorber straights at the last fold. **Fixed** with a larger margin at the η cut (4.3, 4.6). |
+| 4 | Low–Medium | `ATLLArBarrel.cc:112–116` (now 128–141) | With `WITH_ADEPT`, `ReplacePhysics(new G4EmStandardPhysics_AdePT())` silently replaces the EM constructor of *any* list given with `-p`. For lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) the GPU then runs option-0 physics while the user believes otherwise. AdePT documents that `G4EmStandardPhysics_AdePT` is only for option 0 (its case 2). | Refuse or warn for lists whose name has an EM suffix; for those, AdePT recommends registering `AdePTTrackingManager` directly (its case 3). See 7.3. **Fixed**: the guard below is now in `ATLLArBarrel.cc` (lines 128–139); such lists stop with the fatal exception `ATLLArBarrel001`. Other EM options on the GPU (case 3) are not supported. |
+| 5 | Low | `ATLLArBarrel.cc:69–83` | The command-line loop reads `argv[i+1]` without checking `i+1 < argc`: `./ATLLArBarrel -m` reads past the end of `argv` (undefined behaviour, crash). | Check `i+1 < argc` before reading the value and print the help otherwise. **Fixed**: an option without its value now prints the usage error and exits with status 1. |
 | 6 | Low | `CMakeLists.txt:3` | `cmake_minimum_required(VERSION 3.8...3.18)`. `CMAKE_CUDA_ARCHITECTURES=native` (the project default for AdePT) needs CMake ≥ 3.24, and AdePT itself needs ≥ 3.25.2. Also, with CMake 4 the `...3.18` upper bound turns off all policies newer than 3.18. | Raise to `3.16...3.31` and, inside `if(WITH_ADEPT)`, add `cmake_minimum_required(VERSION 3.25.2)` (see 7.2). |
 | 7 | Low | `GNUMakeFile` | Legacy Geant4 GNUmake file. The GNUmake system (`config/binmake.gmk`) is no longer shipped with Geant4 11, the file knows nothing about `hepemlib`, G4HepEm or AdePT, and its name has the wrong case for case-sensitive file systems (`GNUmakefile`). | Remove it; CMake is the only supported build. |
 | 8 | Low | `CMakeLists.txt:95–113` | Directory-wide `include(${Geant4_USE_FILE})` and `include_directories(...)`; `${G4HepEm_LIBRARIES}` is linked also in the default build, where it is empty. | Use target-based `target_include_directories` / `target_link_libraries(ATLLArBarrel PRIVATE ...)` and link G4HepEm only when it is used. Not urgent. |
 | 9 | Low | `src/LArBarrelConstruction.cc`, `src/LArTBCryostatConstruction.cc` | 206 `std::cout` (not `G4cout`) in the geometry code; in MT runs the output is interleaved and cannot be silenced with `/control/cout/...`. | Replace with `G4cout`, or guard the debug prints with the existing `DEBUG_GEO` macro. |
 | 10 | Low | `src/ATLLArBarrelEventAction.cc:92–94` | `GetCollectionID` (string lookups) is called at every event, although the SD already caches the IDs. | Cache the three IDs in the event action at the first event. Negligible cost today. |
-| 11 | Low | `ATLLArBarrel.cc:112`, `src/ATLLArBarrelActIni.cc:30` | `G4PhysListFactory` and the master `ATLLArBarrelEventAction` (created only to describe the ntuple columns) are never deleted. | Use a stack `G4PhysListFactory`; let the master run action own its event action. Cosmetic. |
+| 11 | Low | `ATLLArBarrel.cc:112` (now 125), `src/ATLLArBarrelActIni.cc:30` | `G4PhysListFactory` and the master `ATLLArBarrelEventAction` (created only to describe the ntuple columns) are never deleted. | Use a stack `G4PhysListFactory`; let the master run action own its event action. Cosmetic. |
 | 12 | Info | `runcards/benchmarks/gamma5GeV.mac:4`, `electron50GeV.mac:4` | The CPU macros set `/run/setCut` after `/run/initialize`, the AdePT macros before. Both are correct for their configuration, but the difference is easy to copy wrongly. | Use the "before `/run/initialize`" order in all macros. |
 | 13 | Info | `include/LArBarrelConstruction.hh:98` | `dely(Gama0, G)` ignores its first argument, which also shadows the member `Gama0`. It is only used when `A_SAGGING` is set. | Leave as in ATLAS, or remove the unused parameter. |
 
@@ -180,6 +186,11 @@ last fold, as for the other pieces. The volumes are outside the readout region (
 energy is not affected, but very small overlaps at a mother boundary are a typical source of stuck
 tracks on the GPU navigator.
 
+**Correction (see 4.6).** A closer look shows that the straights *do* subtract `safety_zlen`
+(`tl1`, `bl1` and the position `Zcd`). The protrusions are at the η = 1.475 cut, not at `Zmax`: the
+z lengths `Zcp2l`/`Zcp2h` are computed on the centre line of the absorber, and the corners of the 2.2 mm
+thick absorber cross the inner cone of `STAC` by up to 30 µm, more than the 50 µm z margin covers.
+
 ### 4.4 GDML file
 
 `GDMLs/experimentalHall_v0p1.gdml` is an older export (v0.1). `Results.md` shows that its GeoModel
@@ -192,6 +203,72 @@ would silently use different materials (the Gten and Cables fixes of October 202
 
 `MaterialManager` removes all duplicated materials, and the fixes of `Gten`, `SiO2`, `MBoards` and `Cables`
 described in `Results.md`, section 5, are correct. No further material problem was found.
+
+### 4.6 Fixes applied
+
+Both overlaps are fixed in `src/`. The original files are kept unchanged in `legacy/src/`;
+`-DWITH_LEGACY_GEOMETRY=ON` builds them instead of the fixed ones.
+
+- **`catho3`** (`src/LArBarrelPresamplerConstruction.cc`): option 1 of 4.2. In a tilted module
+  (`mod[i][3] != 0`, i.e. module 2) the first cathode is a `G4IntersectionSolid` of the tilted `G4Trd`
+  with the module envelope, shrunk by `epsil` (7 µm) along the stacking direction to avoid coincident
+  surfaces. The clipped cathode is placed at the module origin with the same name `catho3`.
+  The other 63 cathodes and all anodes are unchanged.
+- **Thin-absorber straights** (`src/LArBarrelConstruction.cc`): where the straight is cut by the
+  η = 1.475 line, the thin absorber (not the electrode) is shortened by 0.2 mm at its high-z end
+  (`safety_zlen_abs = 0.1 mm` subtracted from `tl1`/`bl1`). Its low-z end and the thick absorber
+  inside it do not move.
+
+Checks with Geant4 11.4.3 (tolerance 1 µm, `/geometry/test/run`):
+
+| Geometry | 20000 points per volume | 200000 points per volume |
+|---|---|---|
+| `legacy/src` (original) | `catho3` 1.03 mm; `ThinAbs::Straight` 7, 33, 44, 50, 63: 6.6–19.5 µm (as in 4.1) | not run |
+| `src` (fixed) | **no overlaps** (8904 volumes) | **no overlaps** |
+
+Physics: 400 events of 10 GeV e- at η = 0.2 (FTFP_BERT, cut 0.01 mm) give
+⟨E<sub>LAr</sub>⟩ = 1922.5 ± 10.1 MeV with the fixed geometry and 1914.6 ± 9.9 MeV with the original one,
+a difference of 0.6σ. The removed material is 0.27 mm of cathode outside `STAC` and 0.2 mm of lead
+at the η = 1.475 edge, outside the readout region.
+
+**AdePT on GPU (2026-11-19).** The two AdePT benchmarks of `Results.md`, section 3, were re-run on the
+machine of `Results.md` (EL9, NVIDIA RTX 2070 SUPER, CUDA 13.1, Geant4 11.4.3, AdePT 0.4.2,
+`CMAKE_CUDA_ARCHITECTURES=75`) with two builds from the current sources:
+
+- **fixed**: `src/`, built from the top of AdePT_examples (`examples/CMakeLists.txt`, `WITH_ADEPT` forced on);
+- **legacy**: `legacy/src`, standalone build with `-DWITH_ADEPT=ON -DWITH_LEGACY_GEOMETRY=ON`.
+
+Both use the unmodified `runcards/benchmarks/*_adept.mac` (fluctuations on, cut before init).
+Energies in MeV, errors are standard errors of the mean. "Paired" is the mean of the event-by-event
+difference fixed − legacy (same `EventID`).
+
+5 GeV γ, 300 events, 1 thread (`gamma5GeV_adept.mac`):
+
+| Geometry | EnergyLAr | EnergyLArNoNoise | Time per event |
+|---|---|---|---|
+| `Results.md` 3a (cut before init) | 960.5 ± 10.3 (rms 179) | 973.4 ± 2.6 (rms 45.2, min 834.5) | 232.0 ms |
+| legacy, re-run | 960.5 ± 10.3 (rms 179.0) | 973.4 ± 2.6 (rms 45.2, min 834.5) | 227 ms |
+| **fixed** | 961.3 ± 10.2 (rms 177.0) | **973.8 ± 2.6** (rms 44.4, min 835.5) | 224 ms |
+| fixed − legacy (paired) | | +0.4 ± 0.6 | |
+
+50 GeV e⁻, 150 events, 8 threads (`electron50GeV_adept.mac`):
+
+| Geometry | EnergyLAr | EnergyLArNoNoise | Wall time |
+|---|---|---|---|
+| `Results.md` 3b (cut before init) | 9899.0 ± 19.0 (rms 232, min 8374.2) | 9920.7 ± 13.2 (rms 161, min 8472.5) | 20.31–20.45 s |
+| legacy, re-run | 9899.0 ± 19.0 (rms 232.3, min 8374.2) | 9920.7 ± 13.2 (rms 161.3, min 8472.5) | 20.2 s |
+| **fixed** | 9895.7 ± 19.8 (rms 242.7, min 8168.3) | **9919.4 ± 13.3** (rms 162.8, min 8446.4) | 19.9 s |
+| fixed − legacy (paired) | | −1.3 ± 0.8 | |
+
+- The legacy build reproduces `Results.md` digit for digit, so the software stack is unchanged and the
+  comparison isolates the geometry fix.
+- With the fixed geometry the noise-free LAr energy changes by +0.04 % (5 GeV) and −0.01 % (50 GeV),
+  compatible with zero. The Front, Middle and Back compartment energies agree within their errors, and
+  `HadInteraction` is 0 in all runs.
+- 119/300 (5 GeV) and 32/150 (50 GeV) events are bit-identical between the two geometries. The others
+  differ because tracks crossing the modified volumes change the random sequence, as expected.
+- No `G4Exception`, no overlap message and no stuck or lost tracks in any of the four runs; the time per
+  event is the same for both geometries.
 
 ---
 
@@ -294,7 +371,7 @@ detector processes them.
 A step-by-step migration guide from the original CPU application, with the complete code of a project
 AdePT EM constructor and the converted macros, is in [AdePT_migration.md](AdePT_migration.md).
 
-**Most of what is needed is already in the repository** (commit `d5b2d67` and follow-ups, validated in
+**Most of what is needed is already in the repository** (commit `8099cac` and follow-ups, validated in
 `Results.md`, section 3). Section 7.1 lists all the changes, marking what exists and what is still
 recommended. The items still to do (7.2–7.5) were checked against the AdePT sources but not built,
 because this machine has no NVIDIA GPU.
@@ -306,14 +383,15 @@ because this machine has no NVIDIA GPU.
 | CMake | `WITH_ADEPT` option, `enable_language(CUDA)`, `CMAKE_CUDA_ARCHITECTURES` default, `find_package(AdePT)`, `USE_ADEPT` definition, `cuda_rdc_target_link_libraries` | ✅ present (`CMakeLists.txt:64–79, 110–111`) |
 | CMake | Mutual exclusion `WITH_ADEPT` / `WITH_G4HepEm` | ✅ present |
 | CMake | Minimum CMake version for CUDA/AdePT, `PRIVATE` link scope | ⚠️ recommended (7.2) |
-| Physics | `ReplacePhysics(new G4EmStandardPhysics_AdePT())` on the reference list | ✅ present (`ATLLArBarrel.cc:114–117`) |
-| Physics | Guard for lists with non-default EM options; direct `AdePTTrackingManager` for other EM setups | ⚠️ recommended (7.3) |
+| Physics | `ReplacePhysics(new G4EmStandardPhysics_AdePT())` on the reference list | ✅ present (`ATLLArBarrel.cc:141`) |
+| Physics | Guard for lists with non-default EM options | ✅ present (`ATLLArBarrel.cc:128–139`, finding 4) |
+| Physics | Direct `AdePTTrackingManager` for other EM setups (case 3) | not needed for the validated `FTFP_BERT` (7.3) |
 | User code | Sensitive detector compatible with returned GPU steps | ✅ verified (`Results.md` 3d, section 3.2 here) |
 | User code | Primary identification without `ParentID == 0` | ✅ fixed (`ATLLArBarrelTrackingAction.cc`) |
 | Macros | `/adept/*` before `/run/initialize`, `/run/setCut` before `/run/initialize`, energy-loss fluctuations on, GPU in all regions | ✅ present (`runcards/benchmarks/*_adept.mac`) |
-| Geometry | Fix the two overlaps before GPU production runs | ⚠️ recommended (section 4) |
+| Geometry | Fix the two overlaps before GPU production runs | ✅ fixed (section 4.6; original in `legacy/src`) |
 | Dependencies | CUDA, VecCore, VecGeom (CUDA), G4HepEm (CUDA), G4VG, AdePT; versions for AdePT 0.4.3 | ⚠️ updated list (7.4) |
-| Docs | Matched CPU reference for AdePT | ⚠️ recommended (Appendix A) |
+| Docs | Matched CPU reference for AdePT | ✅ added (`-DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON`, Appendix A) |
 
 ### 7.2 CMake changes
 
@@ -388,8 +466,9 @@ runManager->SetUserInitialization(physicsList);
 processes, then attaches an `AdePTTrackingManager` to e⁻, e⁺ and γ. This is "case 2" of the AdePT
 integration guide, and it is equivalent to AdePT's `FTFP_BERT_AdePT` when `-p FTFP_BERT`.
 
-Recommended guard (finding 4), so that a list with a different EM option is not silently changed to
-option 0:
+Guard (finding 4, now in `ATLLArBarrel.cc`), so that a list with a different EM option is not silently
+changed to option 0. Tested with the AdePT build on the GPU machine (2026-11-19): `FTFP_BERT_EMZ` and
+`QGSP_BIC__GS` stop with `ATLLArBarrel001`, `FTFP_BERT` and `FTFP_BERT_EM0` run. As in the project:
 
 ```cpp
 #ifdef USE_ADEPT
@@ -397,14 +476,16 @@ option 0:
 // refuse reference lists that use another EM option (suffixes of G4PhysListFactory;
 // "_EM0" is option 0 and is fine)
 for (const G4String suffix : {"_EMV", "_EMX", "_EMY", "_EMZ", "_LIV", "_PEN", "__GS", "__SS", "_WVI", "__LE"}) {
-    if (G4StrUtil::ends_with(custom_pl, suffix)) {
-        G4ExceptionDescription msg;
-        msg << "Physics list " << custom_pl << " uses a non-default EM option, which "
-            << "G4EmStandardPhysics_AdePT would replace with option 0.";
-        G4Exception("main()", "ATLLArBarrel001", FatalException, msg);
-    }
+  if (G4StrUtil::ends_with(custom_pl, suffix)) {
+    G4ExceptionDescription msg;
+    msg << "Physics list " << custom_pl << " uses a non-default EM option, which "
+        << "G4EmStandardPhysics_AdePT would replace with option 0. "
+        << "Use a list without EM suffix (or with _EM0) when running with AdePT.";
+    G4Exception("main()", "ATLLArBarrel001", FatalException, msg);
+  }
 }
-physicsList->ReplacePhysics( new G4EmStandardPhysics_AdePT() );
+G4cout << "--> Using AdePT for e-, e+ and gamma" << G4endl;
+physicsList->ReplacePhysics(new G4EmStandardPhysics_AdePT());
 #endif
 ```
 
@@ -505,9 +586,14 @@ Notes:
 2. The G4HepEm configuration printed at initialisation shows energy-loss fluctuations on and the
    production cut of 0.01 mm.
 3. `electron50GeV_adept.mac` with 8 threads: `EnergyLArNoNoise` within 0.2 % of the CPU (`Results.md`: +0.15 ± 0.06 %).
-4. `gamma5GeV_adept.mac`: agreement within statistics.
+   ✅ Done on 2026-11-19 with the fixed geometry (`Results.md` 3e), 10000 events: +0.09 ± 0.02 % against FTFP_BERT
+   and +0.01 ± 0.02 % against the matched CPU reference (`-DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON`).
+4. `gamma5GeV_adept.mac`: agreement within statistics. ✅ Done (`Results.md` 3e), 10000 events: +0.07 ± 0.07 %
+   against FTFP_BERT, −0.06 ± 0.07 % against the matched reference. The longitudinal shape (Front, Middle, Back)
+   also agrees.
 5. `HadInteraction` = 0 for e⁻/γ beams, and the same value as on the CPU for a pion beam.
-6. Repeat after the geometry fixes of section 4: the energy should not change.
+6. Repeat after the geometry fixes of section 4: the energy should not change. ✅ Done on 2026-11-19
+   for `gamma5GeV_adept.mac` and `electron50GeV_adept.mac` (section 4.6): no change within statistics.
 
 ---
 
@@ -541,6 +627,12 @@ updated Xcode SDK. The ROOT files were therefore read with `uproot` from a Pytho
 
 ## Appendix A: patch for the matched G4HepEm configuration
 
+**Applied to the project on 2026-11-19**: the patch below is kept for reference and no longer needs to
+be applied (`git apply` now fails, because the changes are already there). The project version adds one
+setting: G4HepEm's multiple steps in MSC + transportation are disabled by default, as AdePT does on the GPU, and
+`-DWITH_G4HepEmEM_MSC_MULTISTEPS=ON` restores the G4HepEm default used by the patch below and by the matched
+results of section 6 (see `Results.md`, section 3e).
+
 Adds the CMake option `WITH_G4HepEmEM` (requires `WITH_G4HepEm=ON`): the reference physics list chosen with
 `-p` is kept, and only its EM constructor is replaced by `G4EmStandardPhysics` with the
 `G4HepEmTrackingManager` for e⁻, e⁺ and γ. Nuclear processes of e⁻, e⁺ and γ are kept and run by G4HepEm
@@ -552,8 +644,10 @@ cmake ... -DG4HepEm_DIR=<g4hepem-install>/lib/cmake/G4HepEm -DWITH_G4HepEm=ON -D
 ```
 
 ```diff
---- a/ATLLArBarrel.cc
-+++ b/ATLLArBarrel.cc
+diff --git a/examples/ATLLArBarrel/ATLLArBarrel.cc b/examples/ATLLArBarrel/ATLLArBarrel.cc
+index 862d6ad..c400036 100644
+--- a/examples/ATLLArBarrel/ATLLArBarrel.cc
++++ b/examples/ATLLArBarrel/ATLLArBarrel.cc
 @@ -28,6 +28,7 @@
  
  #ifdef USE_G4HepEm
@@ -562,24 +656,26 @@ cmake ... -DG4HepEm_DIR=<g4hepem-install>/lib/cmake/G4HepEm -DWITH_G4HepEm=ON -D
  #endif
  
  #ifdef USE_ADEPT
-@@ -118,7 +119,13 @@ int main(int argc,char** argv) {
-     runManager->SetUserInitialization(physicsList);
-     #endif
+@@ -130,7 +131,13 @@ int main(int argc, char **argv)
+   runManager->SetUserInitialization(physicsList);
+ #endif
  
--    #ifdef USE_G4HepEm
-+    #ifdef USE_G4HepEmEM //reference list, only its EM constructor uses G4HepEm tracking
-+    G4cout<<"--> Using Geant4 reference physics list "<<custom_pl<<" with G4HepEm EM tracking"<<G4endl;
-+    auto physListFactory = new G4PhysListFactory();
-+    auto physicsList = physListFactory->GetReferencePhysList( custom_pl );
-+    physicsList->ReplacePhysics( new G4EmStandardPhysics_G4HepEm() );
-+    runManager->SetUserInitialization(physicsList);
-+    #elif defined(USE_G4HepEm)
-     #ifdef USE_G4HepEmTracking              //use G4HepEm with specialized tracking
-     G4cout<<"--> Using G4HepEm with specialized tracking"<<G4endl;
-     runManager->SetUserInitialization( new PhysicsList("G4HepEmTracking") );
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -51,6 +51,19 @@ if(WITH_G4HepEm)
+-#ifdef USE_G4HepEm
++#ifdef USE_G4HepEmEM // reference list, only its EM constructor uses G4HepEm tracking
++  G4cout << "--> Using Geant4 reference physics list " << custom_pl << " with G4HepEm EM tracking" << G4endl;
++  auto physListFactory = new G4PhysListFactory();
++  auto physicsList     = physListFactory->GetReferencePhysList(custom_pl);
++  physicsList->ReplacePhysics(new G4EmStandardPhysics_G4HepEm());
++  runManager->SetUserInitialization(physicsList);
++#elif defined(USE_G4HepEm)
+ #ifdef USE_G4HepEmTracking // use G4HepEm with specialized tracking
+   G4cout << "--> Using G4HepEm with specialized tracking" << G4endl;
+   runManager->SetUserInitialization(new PhysicsList("G4HepEmTracking"));
+diff --git a/examples/ATLLArBarrel/CMakeLists.txt b/examples/ATLLArBarrel/CMakeLists.txt
+index 62a4e94..f42398d 100644
+--- a/examples/ATLLArBarrel/CMakeLists.txt
++++ b/examples/ATLLArBarrel/CMakeLists.txt
+@@ -62,6 +62,19 @@ if(WITH_G4HepEm)
      add_subdirectory(hepemlib)
  endif()
  
@@ -599,8 +695,10 @@ cmake ... -DG4HepEm_DIR=<g4hepem-install>/lib/cmake/G4HepEm -DWITH_G4HepEm=ON -D
  if(WITH_G4HepEmTracking)
      add_compile_definitions(USE_G4HepEmTracking)
      message("Project CMAKE option: building with USE_G4HepEm with tracking")
---- a/hepemlib/CMakeLists.txt
-+++ b/hepemlib/CMakeLists.txt
+diff --git a/examples/ATLLArBarrel/hepemlib/CMakeLists.txt b/examples/ATLLArBarrel/hepemlib/CMakeLists.txt
+index 774cd86..6893855 100644
+--- a/examples/ATLLArBarrel/hepemlib/CMakeLists.txt
++++ b/examples/ATLLArBarrel/hepemlib/CMakeLists.txt
 @@ -3,6 +3,8 @@ add_library(hepemlib
      include/PhysListHepEmTracking.hh
      src/PhysicsList.cc
@@ -608,9 +706,21 @@ cmake ... -DG4HepEm_DIR=<g4hepem-install>/lib/cmake/G4HepEm -DWITH_G4HepEm=ON -D
 +    include/G4EmStandardPhysics_G4HepEm.hh
 +    src/G4EmStandardPhysics_G4HepEm.cc
  )
+ 
+ # G4HepEmProcess is only available in older G4HepEm versions
+diff --git a/examples/ATLLArBarrel/hepemlib/include/G4EmStandardPhysics_G4HepEm.hh b/examples/ATLLArBarrel/hepemlib/include/G4EmStandardPhysics_G4HepEm.hh
+new file mode 100644
+index 0000000..d1eab8b
 --- /dev/null
-+++ b/hepemlib/include/G4EmStandardPhysics_G4HepEm.hh
-@@ -0,0 +1,25 @@
++++ b/examples/ATLLArBarrel/hepemlib/include/G4EmStandardPhysics_G4HepEm.hh
+@@ -0,0 +1,22 @@
++//**************************************************
++// \file G4EmStandardPhysics_G4HepEm.hh
++// \brief: G4EmStandardPhysics with e-, e+ and gamma
++//         tracked by the G4HepEmTrackingManager
++//         (same structure as AdePT's G4EmStandardPhysics_HepEm)
++//**************************************************
++
 +#ifndef G4EmStandardPhysics_G4HepEm_h
 +#define G4EmStandardPhysics_G4HepEm_h 1
 +
@@ -618,39 +728,56 @@ cmake ... -DG4HepEm_DIR=<g4hepem-install>/lib/cmake/G4HepEm -DWITH_G4HepEm=ON -D
 +
 +class G4EmStandardPhysics_G4HepEm : public G4EmStandardPhysics {
 +
-+    public:
-+        explicit G4EmStandardPhysics_G4HepEm(G4int ver = 1, const G4String& name = "");
-+        ~G4EmStandardPhysics_G4HepEm() override = default;
++public:
++  explicit G4EmStandardPhysics_G4HepEm(G4int ver = 1, const G4String &name = "");
++  ~G4EmStandardPhysics_G4HepEm() override = default;
 +
-+        void ConstructProcess() override;
++  void ConstructProcess() override;
 +};
 +
-+#endif //G4EmStandardPhysics_G4HepEm_h
++#endif // G4EmStandardPhysics_G4HepEm_h
+diff --git a/examples/ATLLArBarrel/hepemlib/src/G4EmStandardPhysics_G4HepEm.cc b/examples/ATLLArBarrel/hepemlib/src/G4EmStandardPhysics_G4HepEm.cc
+new file mode 100644
+index 0000000..76c18d7
 --- /dev/null
-+++ b/hepemlib/src/G4EmStandardPhysics_G4HepEm.cc
-@@ -0,0 +1,37 @@
++++ b/examples/ATLLArBarrel/hepemlib/src/G4EmStandardPhysics_G4HepEm.cc
+@@ -0,0 +1,29 @@
++//**************************************************
++// \file G4EmStandardPhysics_G4HepEm.cc
++// \brief: implementation of G4EmStandardPhysics_G4HepEm
++//**************************************************
++
 +#include "G4EmStandardPhysics_G4HepEm.hh"
-+#include "G4HepEmTrackingManager.hh"
++
 +#include "G4Electron.hh"
 +#include "G4Gamma.hh"
++#include "G4HepEmTrackingManager.hh"
 +#include "G4Positron.hh"
 +
-+G4EmStandardPhysics_G4HepEm::G4EmStandardPhysics_G4HepEm(G4int ver, const G4String& name)
-+    : G4EmStandardPhysics(ver, name) {}
++G4EmStandardPhysics_G4HepEm::G4EmStandardPhysics_G4HepEm(G4int ver, const G4String &name)
++    : G4EmStandardPhysics(ver, name)
++{
++}
 +
-+void G4EmStandardPhysics_G4HepEm::ConstructProcess() {
++void G4EmStandardPhysics_G4HepEm::ConstructProcess()
++{
++  // Register the standard EM processes first (needed for the other particles
++  // and for the tables), then give e-, e+ and gamma to G4HepEm
++  //
++  G4EmStandardPhysics::ConstructProcess();
 +
-+    //Register the standard EM processes first (needed for the other particles
-+    //and for the tables), then give e-, e+ and gamma to G4HepEm
-+    //
-+    G4EmStandardPhysics::ConstructProcess();
-+
-+    auto* trackingManager = new G4HepEmTrackingManager;
-+    G4Electron::Definition()->SetTrackingManager(trackingManager);
-+    G4Positron::Definition()->SetTrackingManager(trackingManager);
-+    G4Gamma::Definition()->SetTrackingManager(trackingManager);
++  auto *trackingManager = new G4HepEmTrackingManager;
++  G4Electron::Definition()->SetTrackingManager(trackingManager);
++  G4Positron::Definition()->SetTrackingManager(trackingManager);
++  G4Gamma::Definition()->SetTrackingManager(trackingManager);
 +}
 ```
 
-The full patch, with file headers, is `~/atllarbarrel-review/g4hepem_em_variant.patch`
-(`git apply` in the repository root).
+Before it was added to the project, it applied with `git apply` in the root of AdePT_examples. It was regenerated on 2026-11-19 from the
+current sources (after clang-format and the fixes of section 4.6), checked with clang-format-19, and
+built with 0 warnings against Geant4 11.4.3 and G4HepEm `780e798` (EL9, gcc 13.3). With 150 electrons
+of 50 GeV and 8 threads (`electron50GeV.mac`) it gives EnergyLArNoNoise = 9902.0 ± 10.9 MeV
+(rms 133.5), compatible with FTFP_BERT on the same machine (`Results.md` 3b: 9913.8 ± 9.9 MeV,
+−11.8 ± 14.7 MeV, 0.8σ), and the log confirms that `photonNuclear` and `electronNuclear` are kept as
+extra G4HepEm processes. The earlier version of this patch, written against the unformatted sources,
+had wrong hunk headers and did not apply.

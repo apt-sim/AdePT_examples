@@ -14,6 +14,8 @@ if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(WITH_ADEPT ON)
     set(WITH_G4HepEm OFF)
     set(WITH_G4HepEmTracking OFF)
+    set(WITH_G4HepEmEM OFF)
+    set(WITH_G4HepEmEM_MSC_MULTISTEPS OFF)
     message("Project CMAKE option: built inside AdePT_examples, forcing WITH_ADEPT=ON")
 endif()
 
@@ -60,6 +62,31 @@ if(WITH_G4HepEm)
         endif()
     endif()
     add_subdirectory(hepemlib)
+endif()
+
+#----------------------------------------------------------------------------
+# Option to keep the reference physics list (-p) and replace only its EM
+# constructor with G4EmStandardPhysics + G4HepEmTrackingManager
+#
+option(WITH_G4HepEmEM "With WITH_G4HepEm: reference physics list with G4HepEm EM tracking" OFF)
+if(WITH_G4HepEmEM)
+    if(NOT WITH_G4HepEm)
+        message(FATAL_ERROR "WITH_G4HepEmEM requires WITH_G4HepEm=ON")
+    endif()
+    add_compile_definitions(USE_G4HepEmEM)
+    message("Project CMAKE option: building with USE_G4HepEmEM (reference list + G4HepEm EM tracking)")
+endif()
+
+# With WITH_G4HepEmEM: multiple MSC steps per transportation step (G4HepEm
+# default). OFF by default, because AdePT does not use them on the GPU
+#
+option(WITH_G4HepEmEM_MSC_MULTISTEPS "With WITH_G4HepEmEM: G4HepEm multiple steps in MSC + transportation (G4HepEm default; AdePT uses OFF)" OFF)
+if(WITH_G4HepEmEM_MSC_MULTISTEPS)
+    if(NOT WITH_G4HepEmEM)
+        message(FATAL_ERROR "WITH_G4HepEmEM_MSC_MULTISTEPS requires WITH_G4HepEmEM=ON")
+    endif()
+    add_compile_definitions(USE_G4HepEmEM_MSC_MULTISTEPS)
+    message("Project CMAKE option: building with USE_G4HepEmEM_MSC_MULTISTEPS (G4HepEm default MSC stepping)")
 endif()
 
 if(WITH_G4HepEmTracking)
@@ -110,6 +137,19 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${Geant4_INCLUDE_DIR})
 file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cc)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh)
+
+#----------------------------------------------------------------------------
+# Option to build the original geometry, kept in legacy/src, instead of the
+# one with the presampler cathode and thin-absorber overlap fixes
+#
+option(WITH_LEGACY_GEOMETRY "Build the original geometry (with the presampler and thin-absorber overlaps)" OFF)
+if(WITH_LEGACY_GEOMETRY)
+    list(FILTER sources EXCLUDE REGEX "/src/(LArBarrelConstruction|LArBarrelPresamplerConstruction)\\.cc$")
+    file(GLOB legacy_sources ${PROJECT_SOURCE_DIR}/legacy/src/*.cc)
+    list(APPEND sources ${legacy_sources})
+    include_directories(${PROJECT_SOURCE_DIR}/src) # PresParameterDef.icc
+    message("Project CMAKE option: building with the legacy geometry (legacy/src)")
+endif()
 
 #----------------------------------------------------------------------------
 # Add the executable, and link it to the Geant4 libraries
