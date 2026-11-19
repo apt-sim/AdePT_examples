@@ -7,6 +7,17 @@ endif()
 project(ATLLARBARREL)
 
 #----------------------------------------------------------------------------
+# When built as part of AdePT_examples (add_subdirectory from examples/)
+# AdePT transport is always enabled and the G4HepEm-only builds are off
+#
+if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(WITH_ADEPT ON)
+    set(WITH_G4HepEm OFF)
+    set(WITH_G4HepEmTracking OFF)
+    message("Project CMAKE option: built inside AdePT_examples, forcing WITH_ADEPT=ON")
+endif()
+
+#----------------------------------------------------------------------------
 # Project CMake modules (FindEXPAT wrapper without version requirement)
 #
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
