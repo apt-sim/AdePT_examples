@@ -171,6 +171,9 @@ elseif(WITH_ADEPT)
     # AdePT-only sources (step 2), compiled only in this configuration
     target_sources(ATLLArBarrel PRIVATE ${PROJECT_SOURCE_DIR}/adept/src/ATLLArBarrelEmPhysics_AdePT.cc)
     target_include_directories(ATLLArBarrel PRIVATE ${PROJECT_SOURCE_DIR}/adept/include)
+    # the AdePT transport headers (included by AdePTTrackingManager.hh) use C++20 (std::span);
+    # AdePT is built with C++20 but does not export the requirement
+    target_compile_features(ATLLArBarrel PRIVATE cxx_std_20)
     # cuda_rdc_* (from VecGeom) keeps the CUDA device linking consistent with AdePT
     cuda_rdc_target_link_libraries(ATLLArBarrel PRIVATE ${Geant4_LIBRARIES} ${AdePT_LIBRARIES})
 else()
@@ -182,6 +185,10 @@ endif()
   plain `target_link_libraries`, the device code is not linked consistently, and the executable fails at
   link time or at start-up. The function comes from VecGeom's `CudaRdcUtils.cmake`, which
   `find_package(AdePT)` loads.
+- **C++20 is required** as soon as the application includes `AdePTTrackingManager.hh` (option B of step 2): the
+  AdePT transport headers it pulls in use `std::span`. AdePT itself is built with C++20 but does not export this
+  requirement to its users, so a C++17 build fails there. Option A only includes `G4EmStandardPhysics_AdePT.hh`,
+  which does not need it.
 - The new sources live in a separate `adept/` directory. The `file(GLOB ... src/*.cc)` of the project must not
   pick them up, because the CPU and G4HepEm builds have no AdePT headers.
 - With the minimal migration (physics option A of step 2), only the `cuda_rdc_target_link_libraries` line is

@@ -166,6 +166,9 @@ elseif(WITH_ADEPT)
     # AdePT-only sources (EM physics constructor), kept out of the src/ glob
     target_sources(ATLLArBarrel PRIVATE ${PROJECT_SOURCE_DIR}/adept/src/ATLLArBarrelEmPhysics_AdePT.cc)
     target_include_directories(ATLLArBarrel PRIVATE ${PROJECT_SOURCE_DIR}/adept/include)
+    # the AdePT transport headers (included by AdePTTrackingManager.hh) use C++20 (std::span);
+    # AdePT is built with C++20 but does not export the requirement
+    target_compile_features(ATLLArBarrel PRIVATE cxx_std_20)
     # cuda_rdc_* (from VecGeom) keeps the CUDA device linking consistent with AdePT
     cuda_rdc_target_link_libraries(ATLLArBarrel PRIVATE ${Geant4_LIBRARIES} ${AdePT_LIBRARIES})
 else()
