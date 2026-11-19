@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: AdePT_examples
+Source: https://github.com/apt-sim/AdePT_examples
+
+Files: examples/ATLLArBarrel/*
+Copyright: 2022 Lorenzo Pezzotti
+           2026 Andrea Dell'Acqua
+License: MIT

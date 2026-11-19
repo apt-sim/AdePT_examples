@@ -1,0 +1,138 @@
+# ATLLArBarrel build options
+
+This page describes the CMake options of ATLLArBarrel, how they combine, and what they
+require at build time and at run time.
+
+## Project options
+
+| Option | Default | Effect | Requires |
+| ------ | ------- | ------ | -------- |
+| `WITH_GEANT4_UIVIS` | `ON` | Build with the Geant4 UI and visualization drivers (`ui_all vis_all`). Set to `OFF` for a batch-only executable. | Geant4 with UI/Vis drivers |
+| `WITH_GPS` | `OFF` | Primary generator: `G4ParticleGun` (`/gun/` macro commands). With `ON`: `G4GeneralParticleSource` (`/gps/` macro commands). | – |
+| `WITH_G4HepEm` | `OFF` | Use the physics list in `hepemlib/`: G4HepEm for e-, e+ and gamma only, no hadronic physics. | G4HepEm (`G4HepEm_DIR`) |
+| `WITH_G4HepEmTracking` | `OFF` | With `WITH_G4HepEm`: use `G4HepEmTrackingManager` instead of `G4HepEmProcess`. Switched on automatically when the G4HepEm installation has no `G4HepEmProcess.hh` (recent G4HepEm versions). | `WITH_G4HepEm=ON` |
+| `WITH_G4HepEmEM` | `OFF` | With `WITH_G4HepEm`: instead of the `hepemlib/` EM-only list, use the reference physics list (`-p`, default `FTFP_BERT`) with its EM constructor replaced by `G4EmStandardPhysics` + `G4HepEmTrackingManager` for e-, e+ and gamma. Nuclear processes of e-, e+ and gamma are kept and run by G4HepEm; hadronic physics is unchanged. Same EM construction as AdePT's `G4EmStandardPhysics_HepEm`: this is the CPU reference for AdePT. | `WITH_G4HepEm=ON` (tracking mode) |
+| `WITH_G4HepEmEM_MSC_MULTISTEPS` | `OFF` | With `WITH_G4HepEmEM`: let G4HepEm do several MSC steps per transportation step, the G4HepEm default (`SetMultipleStepsInMSCWithTransportation(true)`). With `OFF` (default) they are disabled, as in AdePT on the GPU (`Multiple steps in MSC+Trans. : 0` in the G4HepEm printout), so that the CPU reference reproduces AdePT. The setting changes the LAr energy at 50 GeV by about 0.25 % ([Results.md](Results.md), section 3e). | `WITH_G4HepEmEM=ON` |
+| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with AdePT. The EM physics of the reference physics list (`-p`, default `FTFP_BERT`) is replaced by `ATLLArBarrelEmPhysics_AdePT` (`adept/`, same physics as AdePT's `G4EmStandardPhysics_AdePT`, with the project defaults set in code, see [Running with AdePT](#running-with-adept)); hadronic physics stays on the CPU. The default production cut is 0.01 mm. Lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) are refused with the fatal exception `ATLLArBarrel001`, because the AdePT EM constructor would replace their EM physics with option 0. Requires CMake ≥ 3.25.2; the executable is compiled with C++20 (the AdePT headers use `std::span`). | CUDA, AdePT, VecGeom and VecCore with CUDA, G4HepEm with CUDA |
+| `WITH_LEGACY_GEOMETRY` | `OFF` | Build the original geometry kept in `legacy/src/` instead of the fixed one in `src/`. The original has a 1.03 mm overlap of the first presampler cathode and 6–30 µm overlaps of five thin-absorber straight sections ([Review.md](Review.md), section 4). Use it only to compare with earlier results: the LAr energy is the same within statistics, also with AdePT (section 4.6). | – |
+
+### Combinations
+
+| `WITH_G4HepEm` | `WITH_ADEPT` | Physics list | Particles on GPU |
+| -------------- | ------------ | ------------ | ---------------- |
+| `OFF` | `OFF` | Geant4 reference list (`-p`, default `FTFP_BERT`) | none |
+| `ON` | `OFF` | `hepemlib` G4HepEm list (EM only) | none |
+| `ON` + `WITH_G4HepEmEM=ON` | `OFF` | Reference list with `G4EmStandardPhysics` + `G4HepEmTrackingManager`, no multiple MSC steps (matched to AdePT; `WITH_G4HepEmEM_MSC_MULTISTEPS=ON` for the G4HepEm default) | none |
+| `OFF` | `ON` | Reference list with `ATLLArBarrelEmPhysics_AdePT` (AdePT, EM option 0) | e-, e+, gamma |
+| `ON` | `ON` | not allowed: CMake stops with an error, because AdePT already uses G4HepEm | – |
+
+`WITH_GPS`, `WITH_GEANT4_UIVIS` and `WITH_LEGACY_GEOMETRY` can be combined with any of the above.
+
+### Macros and `WITH_GPS`
+
+| Macro | Commands | Needs |
+| ----- | -------- | ----- |
+| `runcards/run_gps.mac` | `/gps/` | `-DWITH_GPS=ON` |
+| all the other macros with a primary generator | `/gun/` | `-DWITH_GPS=OFF` (default) |
+
+A macro used with the wrong option stops the run with `COMMAND NOT FOUND`.
+
+## Standard CMake variables
+
+| Variable | Use |
+| -------- | --- |
+| `Geant4_DIR` | Path to `Geant4Config.cmake`, e.g. `<geant4-install>/lib64/cmake/Geant4` |
+| `G4HepEm_DIR` | Path to `G4HepEmConfig.cmake` (`WITH_G4HepEm=ON`), e.g. `<g4hepem-install>/lib64/cmake/G4HepEm` |
+| `CMAKE_PREFIX_PATH` | For `WITH_ADEPT=ON`: the installation prefixes of AdePT/VecGeom/VecCore and of G4HepEm, separated by `;` |
+| `CMAKE_BUILD_TYPE` | `Release` is recommended for production and timing measurements |
+| `CMAKE_CUDA_ARCHITECTURES` | For `WITH_ADEPT=ON`: compute capability of the GPU without the dot (e.g. `75` for an RTX 2070). Defaults to `native` (the GPU of the build machine). Use the same value as for VecGeom and AdePT. |
+| `CMAKE_CUDA_COMPILER` | For `WITH_ADEPT=ON`, if `nvcc` is not in `PATH`, e.g. `/usr/local/cuda-13.1/bin/nvcc` |
+
+## Build examples
+
+CPU only, Geant4 reference physics list:
+```sh
+cmake -DGeant4_DIR=<geant4-install>/lib64/cmake/Geant4 -DCMAKE_BUILD_TYPE=Release \
+      -DWITH_GPS=OFF ../ATLLArBarrel
+```
+
+G4HepEm (tracking manager):
+```sh
+cmake -DGeant4_DIR=<geant4-install>/lib64/cmake/Geant4 -DCMAKE_BUILD_TYPE=Release \
+      -DG4HepEm_DIR=<g4hepem-install>/lib64/cmake/G4HepEm -DWITH_G4HepEm=ON \
+      -DWITH_GPS=OFF ../ATLLArBarrel
+```
+
+G4HepEm with the reference physics list (CPU reference for AdePT):
+```sh
+cmake -DGeant4_DIR=<geant4-install>/lib64/cmake/Geant4 -DCMAKE_BUILD_TYPE=Release \
+      -DG4HepEm_DIR=<g4hepem-install>/lib64/cmake/G4HepEm -DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON \
+      -DWITH_GPS=OFF ../ATLLArBarrel
+```
+
+AdePT:
+```sh
+cmake -DGeant4_DIR=<geant4-install>/lib64/cmake/Geant4 -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH="<adept-install>;<g4hepem-install>" \
+      -DCMAKE_CUDA_ARCHITECTURES=75 -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc \
+      -DWITH_ADEPT=ON -DWITH_GPS=OFF ../ATLLArBarrel
+```
+
+Use a separate build directory for each configuration (e.g. `build/` and `build-adept/`).
+
+## Running with AdePT
+
+The AdePT EM constructor of the project, `ATLLArBarrelEmPhysics_AdePT` (`adept/`), sets the validated
+defaults in code: all regions on the GPU, energy-loss fluctuations on, 1 M track and hit slots, CUDA stack
+limit 8192. `main()` sets the default production cut to 0.01 mm. Any macro therefore runs with the validated
+settings. `/adept/` commands and `/run/setCut` placed **before** `/run/initialize` override them.
+
+`run_adept.mac` (copied to the build directory) and the `*_adept.mac` macros state the settings explicitly.
+Example, based on `run.mac`:
+
+```
+/adept/setVerbosity 0
+/adept/setMillionsOfTrackSlots 1
+/adept/setMillionsOfHitSlots 1
+/adept/setCUDAStackLimit 8192
+/adept/setTrackInAllRegions true
+/adept/SetEnergyLossFluctuation true
+/run/setCut 0.01 mm
+/run/initialize
+/gun/particle e-
+/gun/energy 50 GeV
+/gun/position 0. 0. 0. m
+/gun/direction 0.980254 0.0120087 0.197375
+/run/beamOn 100
+```
+
+Notes:
+- The output shows `--> Using AdePT for e-, e+ and gamma`, then `AdePTTransport: initializing
+  geometry and physics` and the GPU track slots allocated.
+- The Geant4 geometry is converted to VecGeom automatically. The LAr sensitive detector
+  (`LAr::EMB::STAC`) is unchanged: AdePT returns the GPU steps to the CPU and calls it.
+- The GPU is used efficiently only with enough tracks in flight. Use several threads (`-t`)
+  and/or high-energy showers: with 1 thread and 5 GeV gammas there is no gain over the CPU.
+- AdePT does not support killing GPU tracks from CPU user code, or per-track state cached in
+  shared members of user actions/sensitive detectors (see the AdePT documentation).
+- AdePT itself switches energy-loss fluctuations off by default and sends nothing to the GPU unless
+  `/adept/setTrackInAllRegions true` or `/adept/addGPURegion` is given. `ATLLArBarrelEmPhysics_AdePT` changes
+  both defaults; do not set them back with `/adept/` commands when comparing with the CPU.
+- Set `/run/setCut` **before** `/run/initialize`. If it comes after, the requested production cut is not applied on
+  the GPU, and AdePT deposits about 1.4 % more energy in the LAr than the CPU (`Results.md` 3c). Without any
+  `/run/setCut`, the AdePT build uses 0.01 mm and the CPU build the FTFP_BERT default 0.7 mm.
+- `runcards/run_msc.mac` and `runcards/run_nogammageneral.mac` are CPU only: their EM commands do not act on
+  e-, e+ and gamma with AdePT. `runcards/run_gps_adept.mac` is the AdePT version of `run_gps.mac`
+  (`-DWITH_GPS=ON`).
+- Validation status: with the cut before `/run/initialize`, AdePT agrees with the CPU to better than 0.2 % for
+  50 GeV electrons and within the statistics for 5 GeV gamma. It has been compared only on these benchmarks. See
+  [Results.md](Results.md), section 3.
+- Benchmark macros with the AdePT settings are in `runcards/benchmarks/` (`*_adept.mac`).
+
+## Other notes
+
+- `cmake/FindEXPAT.cmake` drops the expat version requirement recorded by some Geant4
+  installations (e.g. configured with Linuxbrew expat), so the system expat can be used.
+  When building Geant4, `-DGEANT4_USE_SYSTEM_EXPAT=OFF` avoids the issue.
+- With `WITH_G4HepEm=ON` and a G4HepEm built with CUDA (as needed by AdePT), the executable
+  also depends on `libcudart`.

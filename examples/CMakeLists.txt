@@ -3,6 +3,9 @@
 
 cmake_minimum_required(VERSION 3.25)
 
+# ATLAS LAr barrel calorimeter test-beam (Geant4 + AdePT)
+add_subdirectory(ATLLArBarrel)
+
 # Placeholder. Actual examples will go here.
 #
 # Example skeleton for later:

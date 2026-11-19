@@ -1,0 +1,22 @@
+#AdePT version of run.mac, requires -DWITH_ADEPT=ON
+#All /adept/ commands and /run/setCut must precede /run/initialize (see Results.md, section 3c)
+#The /adept/ lines repeat the defaults of ATLLArBarrelEmPhysics_AdePT: they document the run
+#
+/adept/setVerbosity 0
+/adept/setMillionsOfTrackSlots 1
+/adept/setMillionsOfHitSlots 1
+/adept/setCUDAStackLimit 8192
+/adept/setTrackInAllRegions true
+/adept/SetEnergyLossFluctuation true
+#/adept/setSeed 1234                  #optional, reproducible GPU random numbers
+/run/setCut 0.01 mm
+/run/initialize
+/run/printProgress 10
+/gun/particle gamma
+/gun/energy 5 GeV
+/gun/position 0. 0. 0. m
+
+#eta 0.2 phi 0.01225 (0.0245/2)
+/gun/direction 0.980254 0.0120087 0.197375
+
+/run/beamOn 100
