@@ -8,8 +8,9 @@ electrons, positrons and photons on an NVIDIA GPU with [AdePT](https://github.co
 - **Target:** AdePT 0.4.3, released 2026-11-17. AdePT 0.4.2 also works with the same code. It is the
   version validated on the GPU machine in `Results.md`, section 3.
 - **What the current repository already has:** `master` of the original repository (`d91769b`, imported
-  here) contains a working minimal migration (commits `8099cac`, `a6297c3`, `c5dd2bd`, `ac0e2df`). Each step below says whether it is already applied
-  (✅) or still to do (⚠️), so the guide can be followed either from the original code or from `master`.
+  here) contains a working minimal migration (commits `8099cac`, `a6297c3`, `c5dd2bd`, `ac0e2df`). The rest (option B, default cut, CMake
+  check, macros) was added here on 2026-11-19, so every step below is now applied (✅). The guide can still be followed
+  step by step from the original code.
 - **How it was checked:** this guide was written on a Mac without an NVIDIA GPU, against the AdePT 0.4.3 and
   0.4.2 sources. The new code of steps 2 and 3 was only syntax-checked: against Geant4 11.4.3 and G4HepEm
   `20261106`, with stub AdePT headers that have the 0.4.3 signatures. It must be built and validated on the
@@ -160,7 +161,7 @@ endif()
 - `WITH_G4HepEm` must stay off. AdePT brings its own G4HepEm, and the project `hepemlib` would register a
   second tracking manager for the same particles.
 
-### 1b. Link with the CUDA-RDC helper ✅ (in `master`, add `PRIVATE` ⚠️)
+### 1b. Link with the CUDA-RDC helper ✅
 
 ```cmake
 add_executable(ATLLArBarrel ATLLArBarrel.cc ${sources} ${headers})
@@ -186,7 +187,7 @@ endif()
 - With the minimal migration (physics option A of step 2), only the `cuda_rdc_target_link_libraries` line is
   needed.
 
-### 1c. CMake version ⚠️
+### 1c. CMake version ✅
 
 The original `cmake_minimum_required(VERSION 3.8...3.18)` stays valid for the CPU builds. AdePT itself requires
 3.25.2, and `CMAKE_CUDA_ARCHITECTURES=native` requires 3.24. Add an explicit check at the top of the `WITH_ADEPT`
@@ -203,7 +204,7 @@ if(WITH_ADEPT)
 A version check is better than a second `cmake_minimum_required()` inside the `if`, because it does not change
 the policy settings of the rest of the project.
 
-### 1d. Copy the new macro ⚠️
+### 1d. Copy the new macro ✅
 
 Add the macro of step 6 to the scripts copied to the build directory:
 
@@ -232,7 +233,7 @@ changed the default to `OFF`. This is not specific to AdePT, which works with bo
 There are two ways to plug AdePT into the reference physics list. Both give exactly the same physics:
 G4EmStandardPhysics option 0 on the CPU, and G4HepEm (option-0 models) for e⁻/e⁺/γ on the CPU and GPU.
 
-### Option A – AdePT's own constructor ✅ (what `master` does)
+### Option A – AdePT's own constructor (used for the validation in `Results.md`)
 
 ```cpp
 #include <AdePT/g4integration/G4EmStandardPhysics_AdePT.hh>
@@ -245,7 +246,7 @@ to AdePT's `FTFP_BERT_AdePT`. All AdePT settings must come from `/adept/` macro 
 are **not** the ones this project needs: nothing is sent to the GPU, and energy-loss fluctuations are off. A
 macro without the `/adept/` lines therefore runs silently on the CPU, or with different physics (pitfalls 1 and 2).
 
-### Option B – project physics constructor ⚠️ (recommended)
+### Option B – project physics constructor ✅ (what the project does)
 
 This option follows "case 3" of the AdePT integration guide. A project-owned constructor sets the validated
 defaults in code, so that a macro without `/adept/` lines gives the correct physics. The `/adept/` commands of
@@ -254,6 +255,9 @@ before any macro.
 
 The same class is also the place for later customisations, e.g. Woodcock tracking regions, G4HepEm step-limit
 parameters, or GPU-only regions.
+
+The two files are in `adept/` (formatted with clang-format in the repository). They are compiled only with
+`WITH_ADEPT=ON` (step 1b).
 
 **New file `adept/include/ATLLArBarrelEmPhysics_AdePT.hh`:**
 
@@ -371,7 +375,8 @@ void ATLLArBarrelEmPhysics_AdePT::ConstructProcess(){
 
 Notes:
 
-- `ConstructProcess()` follows `G4EmStandardPhysics_AdePT::ConstructProcess()` of AdePT 0.4.3 line by line. Only
+- `ConstructProcess()` follows `G4EmStandardPhysics_AdePT::ConstructProcess()` of AdePT 0.4.2 (identical in 0.4.3)
+  line by line. Only
   the defaults in the constructor are new. When moving to a newer AdePT, compare it with
   `src/g4integration/physics_constructors/G4EmStandardPhysics_AdePT.cc` and keep the two in sync.
 - The class derives from `G4EmStandardPhysics`, so `ReplacePhysics()` recognises it as the EM constructor
@@ -405,9 +410,8 @@ original `WITH_G4HepEm` physics list has no γ/e-nuclear processes and is 0.4 % 
 
 ## Step 3 – main(): `ATLLArBarrel.cc`
 
-Changes relative to the original `main()`. Lines marked `+` are new. The EM-option guard is now in the project
-(with the AdePT EM constructor `G4EmStandardPhysics_AdePT`, option A) ✅; the default cut and the option B
-constructor are still to do ⚠️.
+Changes relative to the original `main()`. Lines marked `+` are new. All of them are now in the project ✅: the
+EM-option guard, the option B constructor and the default cut.
 
 ```cpp
  #ifdef USE_G4HepEm
@@ -613,7 +617,7 @@ only on the GPU. After the fixes, repeat the validation of step 8: the energy sh
    `/process/eLoss/fluct` and `/process/msc/*` for e±. The AdePT equivalents are
    `/adept/SetMultipleStepsInMSCWithTransportation` and `/adept/SetEnergyLossFluctuation`.
 
-### New macro `run_adept.mac` ⚠️
+### New macro `run_adept.mac` ✅
 
 This is the original `run.mac` (5 GeV γ, η = 0.2) converted to AdePT. Put it next to `run.mac` and add it to
 `ATLLArBarrel_SCRIPT` (step 1d):
@@ -651,9 +655,9 @@ the run and stay valid with option A.
 |---|---|
 | `run.mac` | use `run_adept.mac` above (cut moved before init, `/adept/` block) |
 | `runcards/benchmarks/electron50GeV.mac`, `gamma5GeV.mac` | ✅ `*_adept.mac` versions exist |
-| `runcards/run.mac`, `single.mac`, `init.mac` | add the `/adept/` block before `/run/initialize`; no cut is set, so the default applies (0.01 mm with step 3, otherwise 0.7 mm) |
-| `runcards/run_gps.mac` | add the `/adept/` block and move `/run/setCut 0.1 mm` before `/run/initialize`; needs `-DWITH_GPS=ON`. The π⁻ runs work as well: the hadronic shower stays on the CPU, and its EM component goes to the GPU |
-| `runcards/run_msc.mac`, `run_nogammageneral.mac` | their EM commands have no effect on e⁻/e⁺/γ with AdePT (rule 4); do not use them for AdePT studies |
+| `runcards/run.mac`, `single.mac`, `init.mac` | no change needed ✅: option B sets the AdePT defaults in code, and no cut is set, so the default of step 3 applies (0.01 mm; the CPU build keeps 0.7 mm) |
+| `runcards/run_gps.mac` | ✅ `/run/setCut 0.1 mm` moved before `/run/initialize`; AdePT version `runcards/run_gps_adept.mac` with the `/adept/` block (needs `-DWITH_GPS=ON`). The π⁻ runs work as well: the hadronic shower stays on the CPU, and its EM component goes to the GPU |
+| `runcards/run_msc.mac`, `run_nogammageneral.mac` | their EM commands have no effect on e⁻/e⁺/γ with AdePT (rule 4); do not use them for AdePT studies. ✅ marked "CPU only" in the macros |
 | `init_vis.mac`, `vis.mac`, `gui.mac` (interactive) | possible, but GPU tracks are not drawn as trajectories unless `/adept/returnAllSteps true` and `/adept/CallUserTrackingAction true` are set (slow); use the CPU build for visualisation |
 
 ### Useful run-time commands
@@ -763,20 +767,23 @@ Ordered by impact, all observed in this project:
 
 ## Summary of the files to change
 
-| File | Change | Status in `master` |
+| File | Change | Status |
 |---|---|---|
 | `CMakeLists.txt` | `WITH_ADEPT` option, CUDA, `find_package(AdePT)`, `USE_ADEPT`, `cuda_rdc_target_link_libraries` | ✅ |
-| `CMakeLists.txt` | CMake ≥ 3.25.2 check, `PRIVATE`, `adept/` sources, `run_adept.mac` copy | ⚠️ |
-| `adept/include/ATLLArBarrelEmPhysics_AdePT.hh`, `adept/src/ATLLArBarrelEmPhysics_AdePT.cc` | new EM constructor with project defaults (option B) | ⚠️ new |
-| `ATLLArBarrel.cc` | `#include`, `ReplacePhysics(...AdePT...)` | ✅ (option A) |
+| `CMakeLists.txt` | CMake ≥ 3.25.2 check, `PRIVATE`, `adept/` sources, `run_adept.mac` copy | ✅ |
+| `adept/include/ATLLArBarrelEmPhysics_AdePT.hh`, `adept/src/ATLLArBarrelEmPhysics_AdePT.cc` | new EM constructor with project defaults (option B) | ✅ new |
+| `ATLLArBarrel.cc` | `#include`, `ReplacePhysics(...AdePT...)` | ✅ (option B) |
 | `ATLLArBarrel.cc` | EM-option guard (`ATLLArBarrel001`) | ✅ |
-| `ATLLArBarrel.cc` | `SetDefaultCutValue(0.01*mm)`, option B constructor | ⚠️ |
+| `ATLLArBarrel.cc` | `SetDefaultCutValue(0.01*mm)` | ✅ |
 | `src/ATLLArBarrelTrackingAction.cc` | primaries via `GetPrimaryParticle()`, null-process check | ✅ |
 | `src/ATLLArBarrelSensDet.cc`, `include/ATLLArBarrelSensDet.hh` | per-thread HC IDs (no statics), index bounds | ✅ |
 | `src/ATLLArBarrelEventAction.cc`, `RunAction.cc`, `Hit.cc/.hh` | noise-free validation columns (optional) | ✅ |
 | `src/ATLLArBarrelConstruction.cc` (and helpers) | fix `catho3` and ThinAbs overlaps | ✅ done (`src/LAr*Construction.cc`; original in `legacy/src`) |
-| `run_adept.mac` | new macro (step 6) | ⚠️ new |
+| `run_adept.mac` | new macro (step 6) | ✅ new |
 | `runcards/benchmarks/*_adept.mac` | AdePT benchmark macros, cut before init | ✅ |
-| other `runcards/*.mac` | `/adept/` block and cut before init, when used with AdePT | ⚠️ |
+| other `runcards/*.mac` | cut before init in `run_gps.mac`, new `run_gps_adept.mac`, "CPU only" notes | ✅ |
 | `hepemlib/` + `WITH_G4HepEmEM` | matched CPU reference (`Review.md` Appendix A) | ✅ |
-| `README.md`, `BUILD_OPTIONS.md` | document `WITH_ADEPT`, macro rules, pitfalls 1–3 | ✅ partly; add option B and the cut default |
+| `README.md`, `BUILD_OPTIONS.md` | document `WITH_ADEPT`, macro rules, pitfalls 1–3, option B and the cut default | ✅ |
+
+Option B and the default cut were compiled on macOS against the AdePT 0.4.2 interfaces, but not yet run on the GPU.
+With the `*_adept.mac` macros, which set the same values, the physics is unchanged: repeat check 3 of step 8 once.

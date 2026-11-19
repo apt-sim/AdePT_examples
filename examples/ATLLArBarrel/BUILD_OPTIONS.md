@@ -13,7 +13,7 @@ require at build time and at run time.
 | `WITH_G4HepEmTracking` | `OFF` | With `WITH_G4HepEm`: use `G4HepEmTrackingManager` instead of `G4HepEmProcess`. Switched on automatically when the G4HepEm installation has no `G4HepEmProcess.hh` (recent G4HepEm versions). | `WITH_G4HepEm=ON` |
 | `WITH_G4HepEmEM` | `OFF` | With `WITH_G4HepEm`: instead of the `hepemlib/` EM-only list, use the reference physics list (`-p`, default `FTFP_BERT`) with its EM constructor replaced by `G4EmStandardPhysics` + `G4HepEmTrackingManager` for e-, e+ and gamma. Nuclear processes of e-, e+ and gamma are kept and run by G4HepEm; hadronic physics is unchanged. Same EM construction as AdePT's `G4EmStandardPhysics_HepEm`: this is the CPU reference for AdePT. | `WITH_G4HepEm=ON` (tracking mode) |
 | `WITH_G4HepEmEM_MSC_MULTISTEPS` | `OFF` | With `WITH_G4HepEmEM`: let G4HepEm do several MSC steps per transportation step, the G4HepEm default (`SetMultipleStepsInMSCWithTransportation(true)`). With `OFF` (default) they are disabled, as in AdePT on the GPU (`Multiple steps in MSC+Trans. : 0` in the G4HepEm printout), so that the CPU reference reproduces AdePT. The setting changes the LAr energy at 50 GeV by about 0.25 % ([Results.md](Results.md), section 3e). | `WITH_G4HepEmEM=ON` |
-| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with AdePT. The EM physics of the reference physics list (`-p`, default `FTFP_BERT`) is replaced by `G4EmStandardPhysics_AdePT`; hadronic physics stays on the CPU. Lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) are refused with the fatal exception `ATLLArBarrel001`, because `G4EmStandardPhysics_AdePT` would replace their EM physics with option 0. | CUDA, AdePT, VecGeom and VecCore with CUDA, G4HepEm with CUDA |
+| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with AdePT. The EM physics of the reference physics list (`-p`, default `FTFP_BERT`) is replaced by `ATLLArBarrelEmPhysics_AdePT` (`adept/`, same physics as AdePT's `G4EmStandardPhysics_AdePT`, with the project defaults set in code, see [Running with AdePT](#running-with-adept)); hadronic physics stays on the CPU. The default production cut is 0.01 mm. Lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) are refused with the fatal exception `ATLLArBarrel001`, because the AdePT EM constructor would replace their EM physics with option 0. Requires CMake ≥ 3.25.2. | CUDA, AdePT, VecGeom and VecCore with CUDA, G4HepEm with CUDA |
 | `WITH_LEGACY_GEOMETRY` | `OFF` | Build the original geometry kept in `legacy/src/` instead of the fixed one in `src/`. The original has a 1.03 mm overlap of the first presampler cathode and 6–30 µm overlaps of five thin-absorber straight sections ([Review.md](Review.md), section 4). Use it only to compare with earlier results: the LAr energy is the same within statistics, also with AdePT (section 4.6). | – |
 
 ### Combinations
@@ -23,7 +23,7 @@ require at build time and at run time.
 | `OFF` | `OFF` | Geant4 reference list (`-p`, default `FTFP_BERT`) | none |
 | `ON` | `OFF` | `hepemlib` G4HepEm list (EM only) | none |
 | `ON` + `WITH_G4HepEmEM=ON` | `OFF` | Reference list with `G4EmStandardPhysics` + `G4HepEmTrackingManager`, no multiple MSC steps (matched to AdePT; `WITH_G4HepEmEM_MSC_MULTISTEPS=ON` for the G4HepEm default) | none |
-| `OFF` | `ON` | Reference list with `G4EmStandardPhysics_AdePT` | e-, e+, gamma |
+| `OFF` | `ON` | Reference list with `ATLLArBarrelEmPhysics_AdePT` (AdePT, EM option 0) | e-, e+, gamma |
 | `ON` | `ON` | not allowed: CMake stops with an error, because AdePT already uses G4HepEm | – |
 
 `WITH_GPS`, `WITH_GEANT4_UIVIS` and `WITH_LEGACY_GEOMETRY` can be combined with any of the above.
@@ -82,9 +82,13 @@ Use a separate build directory for each configuration (e.g. `build/` and `build-
 
 ## Running with AdePT
 
-AdePT is configured with `/adept/` commands placed **before** `/run/initialize`. Without
-`/adept/setTrackInAllRegions true` (or `/adept/addGPURegion <region>`), no particle is sent
-to the GPU. Example, based on `run.mac`:
+The AdePT EM constructor of the project, `ATLLArBarrelEmPhysics_AdePT` (`adept/`), sets the validated
+defaults in code: all regions on the GPU, energy-loss fluctuations on, 1 M track and hit slots, CUDA stack
+limit 8192. `main()` sets the default production cut to 0.01 mm. Any macro therefore runs with the validated
+settings. `/adept/` commands and `/run/setCut` placed **before** `/run/initialize` override them.
+
+`run_adept.mac` (copied to the build directory) and the `*_adept.mac` macros state the settings explicitly.
+Example, based on `run.mac`:
 
 ```
 /adept/setVerbosity 0
@@ -111,10 +115,15 @@ Notes:
   and/or high-energy showers: with 1 thread and 5 GeV gammas there is no gain over the CPU.
 - AdePT does not support killing GPU tracks from CPU user code, or per-track state cached in
   shared members of user actions/sensitive detectors (see the AdePT documentation).
-- AdePT switches energy-loss fluctuations off by default, while the Geant4 physics lists have them
-  on. Set `/adept/SetEnergyLossFluctuation true` before `/run/initialize` to compare the same physics.
+- AdePT itself switches energy-loss fluctuations off by default and sends nothing to the GPU unless
+  `/adept/setTrackInAllRegions true` or `/adept/addGPURegion` is given. `ATLLArBarrelEmPhysics_AdePT` changes
+  both defaults; do not set them back with `/adept/` commands when comparing with the CPU.
 - Set `/run/setCut` **before** `/run/initialize`. If it comes after, the requested production cut is not applied on
-  the GPU, and AdePT deposits about 1.4 % more energy in the LAr than the CPU.
+  the GPU, and AdePT deposits about 1.4 % more energy in the LAr than the CPU (`Results.md` 3c). Without any
+  `/run/setCut`, the AdePT build uses 0.01 mm and the CPU build the FTFP_BERT default 0.7 mm.
+- `runcards/run_msc.mac` and `runcards/run_nogammageneral.mac` are CPU only: their EM commands do not act on
+  e-, e+ and gamma with AdePT. `runcards/run_gps_adept.mac` is the AdePT version of `run_gps.mac`
+  (`-DWITH_GPS=ON`).
 - Validation status: with the cut before `/run/initialize`, AdePT agrees with the CPU to better than 0.2 % for
   50 GeV electrons and within the statistics for 5 GeV gamma. It has been compared only on these benchmarks. See
   [Results.md](Results.md), section 3.

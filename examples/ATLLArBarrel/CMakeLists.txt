@@ -104,6 +104,11 @@ if(WITH_ADEPT)
     if(WITH_G4HepEm)
         message(FATAL_ERROR "WITH_ADEPT and WITH_G4HepEm cannot be used together: AdePT already uses G4HepEm")
     endif()
+    # AdePT requires CMake >= 3.25.2: stop here with a clear message rather than
+    # inside AdePTConfig.cmake (a version check does not change the policies of the project)
+    if(CMAKE_VERSION VERSION_LESS 3.25.2)
+        message(FATAL_ERROR "WITH_ADEPT requires CMake >= 3.25.2 (found ${CMAKE_VERSION})")
+    endif()
     if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
         set(CMAKE_CUDA_ARCHITECTURES native)
     endif()
@@ -158,8 +163,11 @@ add_executable(ATLLArBarrel ATLLArBarrel.cc ${sources} ${headers})
 if(WITH_G4HepEm)
     target_link_libraries(ATLLArBarrel ${Geant4_LIBRARIES} ${G4HepEm_LIBRARIES} hepemlib)
 elseif(WITH_ADEPT)
+    # AdePT-only sources (EM physics constructor), kept out of the src/ glob
+    target_sources(ATLLArBarrel PRIVATE ${PROJECT_SOURCE_DIR}/adept/src/ATLLArBarrelEmPhysics_AdePT.cc)
+    target_include_directories(ATLLArBarrel PRIVATE ${PROJECT_SOURCE_DIR}/adept/include)
     # cuda_rdc_* (from VecGeom) keeps the CUDA device linking consistent with AdePT
-    cuda_rdc_target_link_libraries(ATLLArBarrel ${Geant4_LIBRARIES} ${AdePT_LIBRARIES})
+    cuda_rdc_target_link_libraries(ATLLArBarrel PRIVATE ${Geant4_LIBRARIES} ${AdePT_LIBRARIES})
 else()
     target_link_libraries(ATLLArBarrel ${Geant4_LIBRARIES} ${G4HepEm_LIBRARIES})
 endif()
@@ -176,6 +184,7 @@ set(ATLLArBarrel_SCRIPT
   vis.mac
   icons.mac
   run.mac
+  run_adept.mac
   single.mac
   )
 

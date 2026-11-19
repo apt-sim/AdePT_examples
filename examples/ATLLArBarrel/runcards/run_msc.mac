@@ -1,3 +1,5 @@
+#CPU only: with AdePT (-DWITH_ADEPT=ON) e-, e+ and gamma are tracked by G4HepEm/AdePT,
+#so /process/em/transportationWithMsc has no effect on them (see AdePT_migration.md, step 6)
 /process/em/transportationWithMsc Enabled
 /process/em/transportationWithMsc MultipleSteps
 /run/initialize

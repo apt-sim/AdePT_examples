@@ -1,3 +1,5 @@
+#CPU only: with AdePT (-DWITH_ADEPT=ON) e-, e+ and gamma are tracked by G4HepEm/AdePT,
+#so /process/em/UseGeneralProcess has no effect on them (see AdePT_migration.md, step 6)
 #inactivate GammaGeneralProcess, must be done at preinit stage
 /process/em/UseGeneralProcess false
 /run/initialize

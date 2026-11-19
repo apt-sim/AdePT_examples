@@ -93,7 +93,9 @@ about 264 MB, below its 512 MB threshold).
 - **AdePT**: `-DWITH_ADEPT=ON`: FTFP_BERT with the EM constructor replaced by
   `G4EmStandardPhysics_AdePT`, equivalent to AdePT's `FTFP_BERT_AdePT`. e-, e+ and gamma are
   transported on the GPU in all regions (1 M track slots, 1 M hit slots). GPU steps are returned
-  to the CPU and processed by the unchanged ATLLArBarrel sensitive detector.
+  to the CPU and processed by the unchanged ATLLArBarrel sensitive detector. Since 2026-11-19 the project
+  uses its own constructor `ATLLArBarrelEmPhysics_AdePT`: same physics, with the settings of the `*_adept.mac`
+  macros as defaults in code (AdePT_migration.md, step 2, option B).
 - **CPU**: the default build, FTFP_BERT.
 
 **Energy-loss fluctuations.** AdePT switches them off by default, while FTFP_BERT on the CPU has them

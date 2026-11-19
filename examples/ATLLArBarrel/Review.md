@@ -92,7 +92,7 @@ importance.
 | 3 | Low–Medium | `src/LArBarrelConstruction.cc` (thin-absorber straights, ~l.1129–1160, 1960–1993) | New: 5 `LAr::EMB::ThinAbs::Straight` copies protrude 6–30 µm from `LAr::EMB::STAC` at z ≈ 3112 mm (the end of STAC). | See 4.3: apply the same 50 µm `safety_zlen` used for other accordion pieces to the z half-length of the thin-absorber straights at the last fold. **Fixed** with a larger margin at the η cut (4.3, 4.6). |
 | 4 | Low–Medium | `ATLLArBarrel.cc:112–116` (now 128–141) | With `WITH_ADEPT`, `ReplacePhysics(new G4EmStandardPhysics_AdePT())` silently replaces the EM constructor of *any* list given with `-p`. For lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) the GPU then runs option-0 physics while the user believes otherwise. AdePT documents that `G4EmStandardPhysics_AdePT` is only for option 0 (its case 2). | Refuse or warn for lists whose name has an EM suffix; for those, AdePT recommends registering `AdePTTrackingManager` directly (its case 3). See 7.3. **Fixed**: the guard below is now in `ATLLArBarrel.cc` (lines 128–139); such lists stop with the fatal exception `ATLLArBarrel001`. Other EM options on the GPU (case 3) are not supported. |
 | 5 | Low | `ATLLArBarrel.cc:69–83` | The command-line loop reads `argv[i+1]` without checking `i+1 < argc`: `./ATLLArBarrel -m` reads past the end of `argv` (undefined behaviour, crash). | Check `i+1 < argc` before reading the value and print the help otherwise. **Fixed**: an option without its value now prints the usage error and exits with status 1. |
-| 6 | Low | `CMakeLists.txt:3` | `cmake_minimum_required(VERSION 3.8...3.18)`. `CMAKE_CUDA_ARCHITECTURES=native` (the project default for AdePT) needs CMake ≥ 3.24, and AdePT itself needs ≥ 3.25.2. Also, with CMake 4 the `...3.18` upper bound turns off all policies newer than 3.18. | Raise to `3.16...3.31` and, inside `if(WITH_ADEPT)`, add `cmake_minimum_required(VERSION 3.25.2)` (see 7.2). |
+| 6 | Low | `CMakeLists.txt:3` | `cmake_minimum_required(VERSION 3.8...3.18)`. `CMAKE_CUDA_ARCHITECTURES=native` (the project default for AdePT) needs CMake ≥ 3.24, and AdePT itself needs ≥ 3.25.2. Also, with CMake 4 the `...3.18` upper bound turns off all policies newer than 3.18. | Raise to `3.16...3.31` and, inside `if(WITH_ADEPT)`, add `cmake_minimum_required(VERSION 3.25.2)` (see 7.2). **Partly fixed**: `WITH_ADEPT` now stops with a clear message below CMake 3.25.2; the `cmake_minimum_required` range is unchanged. |
 | 7 | Low | `GNUMakeFile` | Legacy Geant4 GNUmake file. The GNUmake system (`config/binmake.gmk`) is no longer shipped with Geant4 11, the file knows nothing about `hepemlib`, G4HepEm or AdePT, and its name has the wrong case for case-sensitive file systems (`GNUmakefile`). | Remove it; CMake is the only supported build. |
 | 8 | Low | `CMakeLists.txt:95–113` | Directory-wide `include(${Geant4_USE_FILE})` and `include_directories(...)`; `${G4HepEm_LIBRARIES}` is linked also in the default build, where it is empty. | Use target-based `target_include_directories` / `target_link_libraries(ATLLArBarrel PRIVATE ...)` and link G4HepEm only when it is used. Not urgent. |
 | 9 | Low | `src/LArBarrelConstruction.cc`, `src/LArTBCryostatConstruction.cc` | 206 `std::cout` (not `G4cout`) in the geometry code; in MT runs the output is interleaved and cannot be silenced with `/control/cout/...`. | Replace with `G4cout`, or guard the debug prints with the existing `DEBUG_GEO` macro. |
@@ -382,8 +382,8 @@ because this machine has no NVIDIA GPU.
 |---|---|---|
 | CMake | `WITH_ADEPT` option, `enable_language(CUDA)`, `CMAKE_CUDA_ARCHITECTURES` default, `find_package(AdePT)`, `USE_ADEPT` definition, `cuda_rdc_target_link_libraries` | ✅ present (`CMakeLists.txt:64–79, 110–111`) |
 | CMake | Mutual exclusion `WITH_ADEPT` / `WITH_G4HepEm` | ✅ present |
-| CMake | Minimum CMake version for CUDA/AdePT, `PRIVATE` link scope | ⚠️ recommended (7.2) |
-| Physics | `ReplacePhysics(new G4EmStandardPhysics_AdePT())` on the reference list | ✅ present (`ATLLArBarrel.cc:141`) |
+| CMake | Minimum CMake version for CUDA/AdePT, `PRIVATE` link scope | ✅ added (7.2) |
+| Physics | `ReplacePhysics(new ATLLArBarrelEmPhysics_AdePT())` on the reference list: same physics as `G4EmStandardPhysics_AdePT`, project defaults in code; default cut 0.01 mm | ✅ present (`ATLLArBarrel.cc`, `adept/`; AdePT_migration.md option B) |
 | Physics | Guard for lists with non-default EM options | ✅ present (`ATLLArBarrel.cc:128–139`, finding 4) |
 | Physics | Direct `AdePTTrackingManager` for other EM setups (case 3) | not needed for the validated `FTFP_BERT` (7.3) |
 | User code | Sensitive detector compatible with returned GPU steps | ✅ verified (`Results.md` 3d, section 3.2 here) |
@@ -424,7 +424,8 @@ elseif(WITH_ADEPT)
 - `AdePTConfig.cmake` adds `-Wl,--disable-new-dtags` to `CMAKE_EXE_LINKER_FLAGS`. This is a GNU ld flag,
   so the AdePT build is Linux-only in practice, which is also the only platform with CUDA.
 
-Recommended additions:
+Recommended additions (the version check and `PRIVATE` are now in `CMakeLists.txt`; the
+`cmake_minimum_required` range is unchanged):
 
 ```cmake
 # top of the file: CMake 4 compatible range, keeps modern policies
@@ -466,26 +467,32 @@ runManager->SetUserInitialization(physicsList);
 processes, then attaches an `AdePTTrackingManager` to e⁻, e⁺ and γ. This is "case 2" of the AdePT
 integration guide, and it is equivalent to AdePT's `FTFP_BERT_AdePT` when `-p FTFP_BERT`.
 
+**Update (2026-11-19).** The project now uses its own constructor `ATLLArBarrelEmPhysics_AdePT` (`adept/`,
+`AdePT_migration.md` step 2, option B): the same `ConstructProcess()`, with the validated AdePT settings as
+defaults, and `physicsList->SetDefaultCutValue(0.01*mm)` in `main()`. The code below shows the guard with the
+current names.
+
 Guard (finding 4, now in `ATLLArBarrel.cc`), so that a list with a different EM option is not silently
 changed to option 0. Tested with the AdePT build on the GPU machine (2026-11-19): `FTFP_BERT_EMZ` and
 `QGSP_BIC__GS` stop with `ATLLArBarrel001`, `FTFP_BERT` and `FTFP_BERT_EM0` run. As in the project:
 
 ```cpp
 #ifdef USE_ADEPT
-// G4EmStandardPhysics_AdePT replaces the EM constructor with option 0:
+// The AdePT EM constructor uses EM option 0 (the only one implemented in G4HepEm):
 // refuse reference lists that use another EM option (suffixes of G4PhysListFactory;
 // "_EM0" is option 0 and is fine)
 for (const G4String suffix : {"_EMV", "_EMX", "_EMY", "_EMZ", "_LIV", "_PEN", "__GS", "__SS", "_WVI", "__LE"}) {
   if (G4StrUtil::ends_with(custom_pl, suffix)) {
     G4ExceptionDescription msg;
     msg << "Physics list " << custom_pl << " uses a non-default EM option, which "
-        << "G4EmStandardPhysics_AdePT would replace with option 0. "
+        << "the AdePT EM constructor would replace with option 0. "
         << "Use a list without EM suffix (or with _EM0) when running with AdePT.";
     G4Exception("main()", "ATLLArBarrel001", FatalException, msg);
   }
 }
 G4cout << "--> Using AdePT for e-, e+ and gamma" << G4endl;
-physicsList->ReplacePhysics(new G4EmStandardPhysics_AdePT());
+physicsList->ReplacePhysics(new ATLLArBarrelEmPhysics_AdePT());
+physicsList->SetDefaultCutValue(0.01 * mm);
 #endif
 ```
 

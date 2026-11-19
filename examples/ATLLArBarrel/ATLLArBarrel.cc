@@ -32,7 +32,8 @@
 #endif
 
 #ifdef USE_ADEPT
-#include <AdePT/g4integration/G4EmStandardPhysics_AdePT.hh>
+#include "ATLLArBarrelEmPhysics_AdePT.hh" // EM option 0 with AdePT and the project defaults
+#include "G4SystemOfUnits.hh"
 #endif
 
 // Output helpers
@@ -125,20 +126,24 @@ int main(int argc, char **argv)
   auto physListFactory = new G4PhysListFactory();
   auto physicsList     = physListFactory->GetReferencePhysList(custom_pl);
 #ifdef USE_ADEPT // transport e-, e+ and gamma on GPU with AdePT
-  // G4EmStandardPhysics_AdePT replaces the EM constructor with option 0:
+  // The AdePT EM constructor uses EM option 0 (the only one implemented in G4HepEm):
   // refuse reference lists that use another EM option (suffixes of G4PhysListFactory;
   // "_EM0" is option 0 and is fine)
   for (const G4String suffix : {"_EMV", "_EMX", "_EMY", "_EMZ", "_LIV", "_PEN", "__GS", "__SS", "_WVI", "__LE"}) {
     if (G4StrUtil::ends_with(custom_pl, suffix)) {
       G4ExceptionDescription msg;
       msg << "Physics list " << custom_pl << " uses a non-default EM option, which "
-          << "G4EmStandardPhysics_AdePT would replace with option 0. "
+          << "the AdePT EM constructor would replace with option 0. "
           << "Use a list without EM suffix (or with _EM0) when running with AdePT.";
       G4Exception("main()", "ATLLArBarrel001", FatalException, msg);
     }
   }
   G4cout << "--> Using AdePT for e-, e+ and gamma" << G4endl;
-  physicsList->ReplacePhysics(new G4EmStandardPhysics_AdePT());
+  physicsList->ReplacePhysics(new ATLLArBarrelEmPhysics_AdePT());
+  // Production cut used for the validation, applied before the GPU tables are built
+  // (a /run/setCut after /run/initialize does not reach the GPU, Results.md section 3c);
+  // a /run/setCut before /run/initialize still overrides it
+  physicsList->SetDefaultCutValue(0.01 * mm);
 #endif
   runManager->SetUserInitialization(physicsList);
 #endif
