@@ -5,4 +5,7 @@
 # Locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 # ATLLArBarrel: apply clang-format
+61cd182e2734f8b21c878d6a096507cf7a966b9b
+
+# ATLLArBarrel: apply clang-format (first version of the branch)
 9f92873080427d390df6943b4b17edd7e18690f6

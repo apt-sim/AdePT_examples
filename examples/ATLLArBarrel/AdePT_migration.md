@@ -3,12 +3,12 @@
 This guide lists every step needed to take the **original CPU-only application** to a build that transports
 electrons, positrons and photons on an NVIDIA GPU with [AdePT](https://github.com/apt-sim/AdePT).
 
-- **Starting point:** the application as it was before AdePT, commit `fb8413e` ("Support recent G4HepEm
+- **Starting point:** the application as it was before AdePT, commit `b831c99` ("Support recent G4HepEm
   versions without G4HepEmProcess").
 - **Target:** AdePT 0.4.3, released 2026-11-17. AdePT 0.4.2 also works with the same code. It is the
   version validated on the GPU machine in `Results.md`, section 3.
-- **What the current repository already has:** `master` (`a22047d`) contains a working minimal migration
-  (commits `d5b2d67`, `2d4a569`, `3f257b6`, `76ae120`). Each step below says whether it is already applied
+- **What the current repository already has:** `master` of the original repository (`d91769b`, imported
+  here) contains a working minimal migration (commits `8099cac`, `a6297c3`, `c5dd2bd`, `ac0e2df`). Each step below says whether it is already applied
   (✅) or still to do (⚠️), so the guide can be followed either from the original code or from `master`.
 - **How it was checked:** this guide was written on a Mac without an NVIDIA GPU, against the AdePT 0.4.3 and
   0.4.2 sources. The new code of steps 2 and 3 was only syntax-checked: against Geant4 11.4.3 and G4HepEm
@@ -385,12 +385,19 @@ Notes:
   the CPU alike, and only the processes of other particles would follow option 4. This is why `main()` refuses
   these lists (step 3).
 
-### CPU reference with identical code ⚠️ (recommended)
+### CPU reference with identical code ✅
 
 AdePT also installs `G4EmStandardPhysics_HepEm`: the same construction, with a `G4HepEmTrackingManager` and no
-GPU. The project patch in `Review.md`, Appendix A (`WITH_G4HepEmEM`) builds the same thing without AdePT, and it
-can be used on the Mac. Use one of the two as the CPU reference of every GPU validation. Both have the same EM
-physics as the GPU and the full hadronic list, so any remaining difference comes from the GPU transport. The
+GPU. The project option `-DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON` (`Review.md`, Appendix A) builds the same thing without
+AdePT, and it can be used on a machine without a GPU. Use it as the CPU reference of every GPU validation: it has the
+same EM physics as the GPU and the full hadronic list, so any remaining difference comes from the GPU transport.
+
+One setting must also match: AdePT does not use the G4HepEm multiple steps in MSC + transportation on the GPU
+(`AdePTConfiguration`, `SetMultipleStepsInMSCWithTransportation`, default `false`), while G4HepEm enables them by
+default on the CPU, also in AdePT's `G4EmStandardPhysics_HepEm`. With the G4HepEm default the CPU deposits about
+0.25 % less energy in the LAr than AdePT at 50 GeV; with them disabled it agrees with AdePT (`Results.md`, 3e).
+`WITH_G4HepEmEM` therefore disables them by default (`-DWITH_G4HepEmEM_MSC_MULTISTEPS=ON` restores the G4HepEm
+default), and `G4EmStandardPhysics_HepEm` is not an exact reference unless the same setting is applied. The
 original `WITH_G4HepEm` physics list has no γ/e-nuclear processes and is 0.4 % off at 50 GeV
 (`Review.md` 6.3), so it is **not** a valid reference for AdePT.
 
@@ -398,8 +405,9 @@ original `WITH_G4HepEm` physics list has no γ/e-nuclear processes and is 0.4 % 
 
 ## Step 3 – main(): `ATLLArBarrel.cc`
 
-Changes relative to the original `main()`. Lines marked `+` are new; the guard and the default cut are still to
-do in `master` ⚠️.
+Changes relative to the original `main()`. Lines marked `+` are new. The EM-option guard is now in the project
+(with the AdePT EM constructor `G4EmStandardPhysics_AdePT`, option A) ✅; the default cut and the option B
+constructor are still to do ⚠️.
 
 ```cpp
  #ifdef USE_G4HepEm
@@ -546,7 +554,7 @@ HCE->AddHitsCollection( fMiddleHCID, fMiddleHitsCollection );
 HCE->AddHitsCollection( fBackHCID, fBackHitsCollection );
 ```
 
-Initialise the three members to `-1` in the constructor. The other SD fixes of commit `2d4a569` (`>=` in
+Initialise the three members to `-1` in the constructor. The other SD fixes of commit `a6297c3` (`>=` in
 `CheckHitID` and in the η/φ boundaries) are not AdePT-specific. They avoid out-of-range hit indices, which the
 larger number of GPU steps makes more likely to show up.
 
@@ -733,7 +741,7 @@ Ordered by impact, all observed in this project:
 6. **Different `CMAKE_CUDA_ARCHITECTURES` in the stack:** "no kernel image available" or invalid device function
    at run time.
 7. **Physics list with another EM option (`_EMZ`, `_LIV`...):** silently replaced by option 0. Fixed by the guard
-   (step 3).
+   (step 3), now in the project: such lists stop with `ATLLArBarrel001`.
 8. **Comparing with the original `WITH_G4HepEm` list:** a 0.4 % bias from the missing γ/e-nuclear processes,
    unrelated to the GPU. Use the matched reference (step 2).
 
@@ -761,7 +769,8 @@ Ordered by impact, all observed in this project:
 | `CMakeLists.txt` | CMake ≥ 3.25.2 check, `PRIVATE`, `adept/` sources, `run_adept.mac` copy | ⚠️ |
 | `adept/include/ATLLArBarrelEmPhysics_AdePT.hh`, `adept/src/ATLLArBarrelEmPhysics_AdePT.cc` | new EM constructor with project defaults (option B) | ⚠️ new |
 | `ATLLArBarrel.cc` | `#include`, `ReplacePhysics(...AdePT...)` | ✅ (option A) |
-| `ATLLArBarrel.cc` | EM-option guard, `SetDefaultCutValue(0.01*mm)`, option B constructor | ⚠️ |
+| `ATLLArBarrel.cc` | EM-option guard (`ATLLArBarrel001`) | ✅ |
+| `ATLLArBarrel.cc` | `SetDefaultCutValue(0.01*mm)`, option B constructor | ⚠️ |
 | `src/ATLLArBarrelTrackingAction.cc` | primaries via `GetPrimaryParticle()`, null-process check | ✅ |
 | `src/ATLLArBarrelSensDet.cc`, `include/ATLLArBarrelSensDet.hh` | per-thread HC IDs (no statics), index bounds | ✅ |
 | `src/ATLLArBarrelEventAction.cc`, `RunAction.cc`, `Hit.cc/.hh` | noise-free validation columns (optional) | ✅ |
@@ -769,5 +778,5 @@ Ordered by impact, all observed in this project:
 | `run_adept.mac` | new macro (step 6) | ⚠️ new |
 | `runcards/benchmarks/*_adept.mac` | AdePT benchmark macros, cut before init | ✅ |
 | other `runcards/*.mac` | `/adept/` block and cut before init, when used with AdePT | ⚠️ |
-| `hepemlib/` + `WITH_G4HepEmEM` | matched CPU reference (`Review.md` Appendix A) | ⚠️ |
+| `hepemlib/` + `WITH_G4HepEmEM` | matched CPU reference (`Review.md` Appendix A) | ✅ |
 | `README.md`, `BUILD_OPTIONS.md` | document `WITH_ADEPT`, macro rules, pitfalls 1–3 | ✅ partly; add option B and the cut default |

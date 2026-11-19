@@ -11,7 +11,10 @@ require at build time and at run time.
 | `WITH_GPS` | `OFF` | Primary generator: `G4ParticleGun` (`/gun/` macro commands). With `ON`: `G4GeneralParticleSource` (`/gps/` macro commands). | – |
 | `WITH_G4HepEm` | `OFF` | Use the physics list in `hepemlib/`: G4HepEm for e-, e+ and gamma only, no hadronic physics. | G4HepEm (`G4HepEm_DIR`) |
 | `WITH_G4HepEmTracking` | `OFF` | With `WITH_G4HepEm`: use `G4HepEmTrackingManager` instead of `G4HepEmProcess`. Switched on automatically when the G4HepEm installation has no `G4HepEmProcess.hh` (recent G4HepEm versions). | `WITH_G4HepEm=ON` |
-| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with AdePT. The EM physics of the reference physics list (`-p`, default `FTFP_BERT`) is replaced by `G4EmStandardPhysics_AdePT`; hadronic physics stays on the CPU. | CUDA, AdePT, VecGeom and VecCore with CUDA, G4HepEm with CUDA |
+| `WITH_G4HepEmEM` | `OFF` | With `WITH_G4HepEm`: instead of the `hepemlib/` EM-only list, use the reference physics list (`-p`, default `FTFP_BERT`) with its EM constructor replaced by `G4EmStandardPhysics` + `G4HepEmTrackingManager` for e-, e+ and gamma. Nuclear processes of e-, e+ and gamma are kept and run by G4HepEm; hadronic physics is unchanged. Same EM construction as AdePT's `G4EmStandardPhysics_HepEm`: this is the CPU reference for AdePT. | `WITH_G4HepEm=ON` (tracking mode) |
+| `WITH_G4HepEmEM_MSC_MULTISTEPS` | `OFF` | With `WITH_G4HepEmEM`: let G4HepEm do several MSC steps per transportation step, the G4HepEm default (`SetMultipleStepsInMSCWithTransportation(true)`). With `OFF` (default) they are disabled, as in AdePT on the GPU (`Multiple steps in MSC+Trans. : 0` in the G4HepEm printout), so that the CPU reference reproduces AdePT. The setting changes the LAr energy at 50 GeV by about 0.25 % ([Results.md](Results.md), section 3e). | `WITH_G4HepEmEM=ON` |
+| `WITH_ADEPT` | `OFF` | Transport e-, e+ and gamma on the GPU with AdePT. The EM physics of the reference physics list (`-p`, default `FTFP_BERT`) is replaced by `G4EmStandardPhysics_AdePT`; hadronic physics stays on the CPU. Lists with another EM option (suffixes `_EMV`, `_EMX`, `_EMY`, `_EMZ`, `_LIV`, `_PEN`, `__GS`, `__SS`, `_WVI`, `__LE`) are refused with the fatal exception `ATLLArBarrel001`, because `G4EmStandardPhysics_AdePT` would replace their EM physics with option 0. | CUDA, AdePT, VecGeom and VecCore with CUDA, G4HepEm with CUDA |
+| `WITH_LEGACY_GEOMETRY` | `OFF` | Build the original geometry kept in `legacy/src/` instead of the fixed one in `src/`. The original has a 1.03 mm overlap of the first presampler cathode and 6–30 µm overlaps of five thin-absorber straight sections ([Review.md](Review.md), section 4). Use it only to compare with earlier results: the LAr energy is the same within statistics, also with AdePT (section 4.6). | – |
 
 ### Combinations
 
@@ -19,10 +22,11 @@ require at build time and at run time.
 | -------------- | ------------ | ------------ | ---------------- |
 | `OFF` | `OFF` | Geant4 reference list (`-p`, default `FTFP_BERT`) | none |
 | `ON` | `OFF` | `hepemlib` G4HepEm list (EM only) | none |
+| `ON` + `WITH_G4HepEmEM=ON` | `OFF` | Reference list with `G4EmStandardPhysics` + `G4HepEmTrackingManager`, no multiple MSC steps (matched to AdePT; `WITH_G4HepEmEM_MSC_MULTISTEPS=ON` for the G4HepEm default) | none |
 | `OFF` | `ON` | Reference list with `G4EmStandardPhysics_AdePT` | e-, e+, gamma |
 | `ON` | `ON` | not allowed: CMake stops with an error, because AdePT already uses G4HepEm | – |
 
-`WITH_GPS` and `WITH_GEANT4_UIVIS` can be combined with any of the above.
+`WITH_GPS`, `WITH_GEANT4_UIVIS` and `WITH_LEGACY_GEOMETRY` can be combined with any of the above.
 
 ### Macros and `WITH_GPS`
 
@@ -56,6 +60,13 @@ G4HepEm (tracking manager):
 ```sh
 cmake -DGeant4_DIR=<geant4-install>/lib64/cmake/Geant4 -DCMAKE_BUILD_TYPE=Release \
       -DG4HepEm_DIR=<g4hepem-install>/lib64/cmake/G4HepEm -DWITH_G4HepEm=ON \
+      -DWITH_GPS=OFF ../ATLLArBarrel
+```
+
+G4HepEm with the reference physics list (CPU reference for AdePT):
+```sh
+cmake -DGeant4_DIR=<geant4-install>/lib64/cmake/Geant4 -DCMAKE_BUILD_TYPE=Release \
+      -DG4HepEm_DIR=<g4hepem-install>/lib64/cmake/G4HepEm -DWITH_G4HepEm=ON -DWITH_G4HepEmEM=ON \
       -DWITH_GPS=OFF ../ATLLArBarrel
 ```
 
